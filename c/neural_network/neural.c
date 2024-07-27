@@ -13,8 +13,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 // might want to replace this - lol
-
-double NN_random( double scale, double offset ) {
+double NN_random(double scale, double offset) {
   union {
     uint32_t v;
     struct {
@@ -29,19 +28,17 @@ double NN_random( double scale, double offset ) {
   return gen * scale + offset;
 }
 
-
 static double sigmoid_act(double x) {
   return 1.0 / (1.0 + exp(-x));
 }
 
-// Activation function derivatives
 static double sigmoid_deriv(double x) {
   double s = sigmoid_act(x);
   return s * (1 - s);
 }
 
 static double tanh_act(double x) {
-  return tanh(x);  // or use the formula directly
+  return tanh(x);
 }
 
 static double tanh_deriv(double x) {
@@ -51,13 +48,14 @@ static double tanh_deriv(double x) {
 
 static void init_neuron(NN_neuron_t *neuron, int n) {
   for (int i = 0; i < n; i++)
-    neuron->weights[i] = NN_random( 2.0, -1.0 );
+    neuron->weights[i] = NN_random(2.0, -1.0);
   neuron->bias = 0.0;
 }
 
 static void init_neural_layer(NN_neural_layer_t *layer, int size, NN_neural_layer_t *feed, int is_output) {
   layer->type = is_output ? NN_output : NN_hidden;
-  layer->size = size <= 0 ? 1 : size > NN_MAX_NEURONS ? NN_MAX_NEURONS : size;
+  layer->size = size;
+  CLAMP(layer->size, 1, NN_MAX_NEURONS);
   layer->feed = feed;
   if (layer->feed) {
     for (int i = 0; i < layer->size; i++) {
@@ -68,7 +66,8 @@ static void init_neural_layer(NN_neural_layer_t *layer, int size, NN_neural_laye
 
 static void init_neural_first_hidden_layer(NN_neural_layer_t *layer, int size, int input_size, const double *input) {
   layer->type = NN_first;
-  layer->size = size <= 0 ? 1 : size > NN_MAX_NEURONS ? NN_MAX_NEURONS : size;
+  layer->size = size;
+  CLAMP(layer->size, 1, NN_MAX_NEURONS);
   layer->input = input;
   for (int i = 0; i < layer->size; i++)
     init_neuron(&layer->neurons[i], input_size);
@@ -122,20 +121,18 @@ void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params) {
   init_neural_layer(&nn->output_layer, nn->info.output_size, &nn->hidden_layers[nls - 1], 1);
 }
 
-
 void NN_forward_propagate(NN_neural_network_t *nn) {
   for (int i = 0; i < nn->info.hidden_layers_size; i++) {
     neural_layer_propagate(&nn->hidden_layers[i], nn->info.input_size);
   }
   neural_layer_propagate_regress(&nn->output_layer);
-  for( int i = 0; i < nn->info.output_size; i++ )
+  for (int i = 0; i < nn->info.output_size; i++)
     nn->prediction[i] = nn->output_layer.neurons[i].value;
 }
 
 // the effing meat and potatoes of this whol thing
-
-void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate ) {
-  learning_rate = fabs( learning_rate);
+void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate) {
+  learning_rate = fabs(learning_rate);
 
   int output_size = nn->info.output_size;
   // calculate output layer errors and gradients
@@ -169,18 +166,17 @@ void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate ) {
     curr_layer = &nn->hidden_layers[l];  //next_layer->feed
     NN_neuron_t *next_neurons = next_layer->neurons;
 
-    // this layer's neuron 0 is scaled by next layer's weight 0
-    // this layer's neuron 1 is scaled by next layer's weight 1
-    // this layer's neuron 2 is scaled by next layer's weight 2
+    // this layer's neuron 0 is the input to and scaled by next layer's weight 0
+    // this layer's neuron 1 is the input to and scaled by next layer's weight 1
+    // this layer's neuron 2 is the input to and scaled by next layer's weight 2
     // etc..
     // the ith neuron is fed into all the next layer's neurons, so we
     // iterate over all of the next layer neurons (using their respective weight)
     // and operate accordingly
-
     double *hidden_error = errors[l];
     double *hidden_error_next = errors[l + 1];
 
-    // compute output layer error:
+    // compute hidden layer error:
     for (int i = 0; i < curr_layer->size; i++) {
       hidden_error[i] = 0;
       for (int j = 0; j < next_layer->size; j++) {
@@ -193,26 +189,24 @@ void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate ) {
     for (int i = 0; i < curr_layer->size; i++) {
       NN_neuron_t *neuron = &curr_layer->neurons[i];
       neuron->bias -= learning_rate * hidden_error[i];
-      if (curr_layer->type > 0) {  //feed is another layer
+      if (curr_layer->type > 0) {  // feed is previous layer
         NN_neural_layer_t *prev_layer = curr_layer->feed;
         for (int j = 0; j < prev_layer->size; j++) {
           neuron->weights[j] -= learning_rate * hidden_error[i] * prev_layer->neurons[j].value;
         }
-      } else if (curr_layer->type == 0) {
-
+      } else if (curr_layer->type == 0) {  // feed in the input
         for (int j = 0; j < nn->info.input_size; j++) {
           neuron->weights[j] -= learning_rate * hidden_error[i] * nn->input[j];
         }
       }
-
     }
     next_layer = curr_layer;
   }
 
 }
 
-void NN_train_neural_network( NN_neural_network_t *nn, double learning_rate ){
-  learning_rate = fabs( learning_rate);
+void NN_train_neural_network(NN_neural_network_t *nn, double learning_rate) {
+  learning_rate = fabs(learning_rate);
   NN_forward_propagate(nn);
   NN_backward_propagate(nn, learning_rate);
 }

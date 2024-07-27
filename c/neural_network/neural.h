@@ -9,10 +9,14 @@ typedef struct {
   double value;
 } NN_neuron_t;
 
-typedef enum { NN_first, NN_hidden, NN_output } NN_layer_type_t;
+typedef enum {
+  NN_first,
+  NN_hidden,
+  NN_output
+} NN_layer_type_t;
 typedef struct NN_neural_layer_s {
   int size;
-  NN_layer_type_t type;  //0 first, 1 in hidden, 2 output
+  NN_layer_type_t type;
   NN_neuron_t neurons[NN_MAX_NEURONS];
   union {
     struct NN_neural_layer_s *feed;
@@ -20,16 +24,18 @@ typedef struct NN_neural_layer_s {
   };
 } NN_neural_layer_t;
 
+typedef enum {
+  NN_sigmoid,
+  NN_tanh
+} NN_activation_type_t;  // not implemented yet
 
-typedef enum { NN_sigmoid, NN_tanh } NN_activation_type_t;  // not implemented yet
-
-typedef struct{
+typedef struct {
   NN_activation_type_t activation;
   int input_size;
   int output_size;
   int hidden_layers_size;
   int neurons_per[NN_MAX_HIDDEN_LAYERS];
-}NN_info_t;
+} NN_info_t;
 
 typedef struct {
   NN_info_t info;
@@ -42,12 +48,9 @@ typedef struct {
   int output_size;
 } NN_neural_network_t;
 
-
-
-double NN_random( double scale, double offset );
-void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params );
+double NN_random(double scale, double offset);
+void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params);
 void NN_forward_propagate(NN_neural_network_t *nn);
 //void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate );
-void NN_train_neural_network(NN_neural_network_t *nn, double learning_rate );
-
+void NN_train_neural_network(NN_neural_network_t *nn, double learning_rate);
 

@@ -7,8 +7,8 @@
 
 #include "neural.h"
 
-#define EPOCHS  1000000
-#define LEARNING_RATE 0.0003
+#define EPOCHS  750000
+#define LEARNING_RATE 0.03
 
 
 void print_neural_layer(const NN_neural_layer_t *layer, int input_size) {
@@ -65,10 +65,10 @@ int main() {
   print_neural_network(nn);
   printf("******************\n");
 
-  for (int k = 0; k < 750000; k++) {
+  for (int k = 0; k < EPOCHS; k++) {
     nn->input[0] = NN_random( 2.0, -1.0 );
     nn->target[0] = func(nn->input[0]);
-    NN_train_neural_network(nn, 0.05);
+    NN_train_neural_network(nn, LEARNING_RATE);
   }
 
   printf("******************\n");
@@ -84,16 +84,16 @@ int main() {
   printf("******************\n");
 
   double sum = 0.0f;
-  for( int i = 0; i < 20; i++ ){
+  for( int i = 0; i < 10; i++ ){
     nn->input[0] = NN_random( 2.0, -1.0 );
     NN_forward_propagate(nn);
     nn->target[0] = func(nn->input[0]);
 
     double diff = (nn->target[0] - nn->prediction[0]);
     sum += diff * diff;
-    printf("target v. prediction: %lf v. %lf\n", nn->target[0], nn->prediction[0]);
+    printf("%d) target v. prediction: %lf v. %lf\n", i, nn->target[0], nn->prediction[0]);
   }
-  printf( "MSE: %lf", sum / 20.0 );
+  printf( "MSE: %lf", sum / 10.0 );
 
   free( nn );
   return 0;
