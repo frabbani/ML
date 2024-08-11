@@ -66,6 +66,20 @@ void draw() {
   Vector2 p;
   Vector2 center = { DISP_W / 2, DISP_H / 2 };
 
+#if 0
+  for (auto v : g.trainingPts) {
+    p.x = v.x * DISP_W;
+    p.y = v.y * DISP_H;
+    draw_box(center + p, 3, 3, Pixel24(250, 84, 84));
+  }
+
+  for (auto v : g.trainingPts2) {
+    p.x = v.x * DISP_W;
+    p.y = v.y * DISP_H;
+    draw_box(center + p, 3, 3, Pixel24(84, 84, 250));
+  }
+#endif
+
   p.x = g.runner.x * DISP_W;
   p.y = g.runner.y * DISP_H;
   draw_box(center + p, 16, 16, Pixel24(123, 115, 170));
@@ -84,7 +98,6 @@ int main(int argc, char *args[]) {
   setbuf( stdout, NULL);
 
   if (!sdl.init( DISP_W, DISP_H, false, "Run Boy Run!")) {
-    printf("SDL failed...?\n");
     return 0;
   }
 

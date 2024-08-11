@@ -21,6 +21,7 @@ struct Game {
     nn = new NN_neural_network_t;
 
     NN_info_t info;
+    info.activation = NN_tanh;
     info.hidden_layers_size = 1;
     info.input_size = 4;
     info.output_size = 2;
@@ -51,7 +52,6 @@ struct Game {
       d.y = +1.0;
     return d;
   }
-
 
   void trainChaser() {
     auto setup_target = [&]() {
