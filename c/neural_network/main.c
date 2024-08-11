@@ -52,11 +52,12 @@ int main() {
   NN_neural_network_t *nn = malloc( sizeof(NN_neural_network_t));
 
   NN_info_t info;
-  info.hidden_layers_size = 3;
+  info.activation = NN_sigmoid;
+  info.hidden_layers_size = 1;
   info.input_size = 1;
   info.output_size = 1;
   for( int i = 0; i < info.hidden_layers_size; i++ )
-    info.neurons_per[i] = 3;
+    info.neurons_per[i] = 15;
 
 
   NN_init_neural_network(nn, &info);

@@ -1,7 +1,12 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define NN_MAX_NEURONS 256
-#define NN_MAX_HIDDEN_LAYERS  64
+#define NN_MAX_HIDDEN_LAYERS  16
 
 typedef struct {
   double weights[NN_MAX_NEURONS];
@@ -14,6 +19,7 @@ typedef enum {
   NN_hidden,
   NN_output
 } NN_layer_type_t;
+
 typedef struct NN_neural_layer_s {
   int size;
   NN_layer_type_t type;
@@ -26,8 +32,9 @@ typedef struct NN_neural_layer_s {
 
 typedef enum {
   NN_sigmoid,
-  NN_tanh
-} NN_activation_type_t;  // not implemented yet
+  NN_tanh,
+  NN_relu,
+} NN_activation_type_t;
 
 typedef struct {
   NN_activation_type_t activation;
@@ -51,6 +58,9 @@ typedef struct {
 double NN_random(double scale, double offset);
 void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params);
 void NN_forward_propagate(NN_neural_network_t *nn);
-//void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate );
+void NN_backward_propagate(NN_neural_network_t *nn, double learning_rate );
 void NN_train_neural_network(NN_neural_network_t *nn, double learning_rate);
 
+#ifdef __cplusplus
+}
+#endif
