@@ -1,3 +1,3 @@
-# All Things AI Related
+# All Things ML/AI Related
 
-Running collection of all projects AI related. Not restricted to one language. 
+Collection of my projects focused on Artificial Intelligence (AI) and Machine Learning (ML). The collection encompasses various projects and implementations, and it is not restricted to any particular programming language.
