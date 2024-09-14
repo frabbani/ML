@@ -6,6 +6,21 @@
 
 #include "vector.h"
 
+/*
+ Lagrangian Function
+ * L(x,lambda) = f(x) + lambda*g(x)
+   - dL/dx = df(x)/dx + lambda * dg(x)/dx
+   - dL/dlambda = g(x)
+
+ Finite Difference Method (FDM) using 2 point stencil
+ * df(x)/dx = ( f(x+h) - f(x-h) ) / 2h
+
+ Gradient operator (returns vector)
+ * GRAD(f) = ( df/dx, df/dy )
+
+ In this example, the input is a 2 dimensional vector
+*/
+
 #define H 0.01
 #define LEARNING_RATE 0.03
 
@@ -21,8 +36,6 @@ double g(vector_t x) {
 
 // function gradient
 vector_t f_grad(vector_t v) {
-  // finite difference method (FDM) central difference scheme:
-  // df(x)/dx = ( f(x+h) - f(x-h) ) / 2h
   double grad_x = 0.5 / H * (f(vector(v.x + H, v.y)) - f(vector(v.x - H, v.y)));
   double grad_y = 0.5 / H * (f(vector(v.x, v.y + H)) - f(vector(v.x, v.y - H)));
   return vector(grad_x, grad_y);
@@ -30,8 +43,6 @@ vector_t f_grad(vector_t v) {
 
 // constraint gradient
 vector_t g_grad(vector_t v) {
-  // finite difference method (FDM) central difference scheme:
-  // dg(x)/dx = ( g(x+h) - g(x-h) ) / 2h
   double grad_x = 0.5 / H * (g(vector(v.x + H, v.y)) - g(vector(v.x - H, v.y)));
   double grad_y = 0.5 / H * (g(vector(v.x, v.y + H)) - g(vector(v.x, v.y - H)));
   return vector(grad_x, grad_y);
@@ -39,9 +50,17 @@ vector_t g_grad(vector_t v) {
 
 // lagrangian gradient
 vector_t L_grad(vector_t v, double lambda) {
-  // GRAD(L) = GRAD(f(x)) - lambda * GRAD(g(x))
+  // L(x,lambda) = f(x) + lambda*g(x)
+  // GRAD(L) = GRAD(f(x)) + lambda * GRAD(g(x))
   return vector_sub(f_grad(v), vector_mul(lambda, g_grad(v)));
 }
+
+double dL_dlambda( vector_t x){
+  // L(x,lambda) = f(x) + lambda*g(x)
+  // dL(x)/dlambda = g(x)
+  return g(x);
+}
+
 
 void solve_lagrange(vector_t *x_out, double *lambda_out) {
   // simple gradient decent
@@ -52,9 +71,9 @@ void solve_lagrange(vector_t *x_out, double *lambda_out) {
   int n;
   for (n = 0; n < 3000; n++) {
     grad_L = L_grad(x, lambda);
-    // x + LR * GRAD(L)
+    // x = x - LR * GRAD(L)
     x = vector_sub(x, vector_mul( LEARNING_RATE, grad_L));  //descend downhill
-    lambda -= LEARNING_RATE * g(x);  // penalty
+    lambda -= LEARNING_RATE * dL_dlambda(x);
 
     grad_f = f_grad(x);
     if (fabs(g(x)) < TOL && fabs(grad_f.x) < TOL && fabs(grad_f.y) < TOL) {
@@ -74,9 +93,9 @@ int main() {
   vector_t x;
   double lambda;
   solve_lagrange(&x, &lambda);
-
-  printf("optimal x.......: (%lf, %lf)\n", x.x, x.y);
-  printf("optimal lambda..: %lf\n", lambda);
+  printf("f(x) & g(x).....: %.3lf & %.3lf\n", f(x), g(x));
+  printf("optimal x.......: (%.3lf, %.3lf)\n", x.x, x.y);
+  printf("optimal lambda..: %.3lf\n", lambda);
 
   printf("Goodbye!\n");
   return 0;
