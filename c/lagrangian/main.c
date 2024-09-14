@@ -88,6 +88,7 @@ void solve_lagrange(vector_t *x_out, double *lambda_out) {
 int main() {
   setbuf( stdout, 0);
   printf("Hello world!\n");
+
   printf("function f(x)...: x^2 + y^2\n");
   printf("constraint g(x).: x + y + 1 = 0\n");
   vector_t x;
