@@ -12,10 +12,6 @@ def dL_dx(x, penalty):
     return df_dx(x) + penalty * g(x) * dg_dx(x)
 
 
-GRAD_TOL = 0.1  # gradient tolerance
-PERTURBATION = 0.3  # jitter amount
-LEARNING_RATE = 0.001
-
 def solve_penalty():
     x = 5  # initial guess
     learning_rate = 0.01
