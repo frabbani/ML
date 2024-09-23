@@ -1,0 +1,3 @@
+x = getx()
+y = gety()
+z = x*x + y*y

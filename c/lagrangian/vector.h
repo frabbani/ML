@@ -43,6 +43,12 @@ vector_t vector_mul(double s, vector_t v) {
   return v;
 }
 
+vector_t vector_inv(vector_t v) {
+  v.x *= -1.0;
+  v.y *= -1.0;
+  return v;
+}
+
 vector_t vector_madd(double s, vector_t u, vector_t v) {
   // u * s + v
   v.x += u.x * s;
