@@ -80,7 +80,7 @@ void drawText(const std::string &text, int x, int y) {
 
 void drawText(Pixels &pixels, const std::string &text, int x, int y,
               Pixel24 color) {
-  auto glyphs = sdl.fonts["night"]->glyphs;
+  auto glyphs = sdl.fonts["night machine"]->glyphs;
 
   sdl2::Rect rect;
   rect.x = x;
@@ -136,8 +136,7 @@ void init() {
     }
   }
 
-  sdl.loadFont("monofonto", "monofonto.otf", 30);
-  sdl.loadFont("night", "Night Machine.otf", 24);
+  sdl.loadFont("night machine", "Night Machine.otf", 24);
 
   printf("************\n");
 }
