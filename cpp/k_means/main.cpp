@@ -234,7 +234,7 @@ void term() {
 int main(int argc, char *args[]) {
   setbuf( stdout, NULL);
 
-  if (!sdl.init( DISP_W, DISP_H, false, "line up!")) {
+  if (!sdl.init( DISP_W, DISP_H, false, "come at me, bro!")) {
     return 0;
   }
 
