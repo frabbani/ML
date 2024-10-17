@@ -51,14 +51,16 @@ constexpr double learningRate = 0.3;
 std::array<Pixel24, numClusters> labelColors;
 Pixel24 unlabeledColor(0, 64, 32);
 
+Pixel24 labelColor( int label ){
+  if( label < 0 || label > numClusters )
+    return unlabeledColor;
+  return labelColors[label];
+
+}
+
 struct Point {
-  Vector2 o;  // origin
-  int label = -1;  // cluster no.
-  Pixel24 color() {
-    if (label < 0 || label >= numClusters)
-      return unlabeledColor;
-    return labelColors[label];
-  }
+  Vector2 o;        // origin
+  int label = -1;   // cluster no.
 };
 
 std::vector<Point> points;
@@ -215,7 +217,7 @@ void draw() {
 
   for (auto p : points) {
     draw_box(p.o, 3, 3,
-             alpha_blend(pointColor, p.color(), drawType ? 0.5 : 0.0));
+             alpha_blend(pointColor, labelColor(p.label), drawType ? 0.5 : 0.0));
   }
 
 //  for (int i = 0; i < int(origins.size()); i++)
