@@ -31,7 +31,7 @@ static inline vec4 toVec4(const Pixel32 &pixel) {
 vec4 alphaBlend(const vec4 &src, const vec4 &dst) {
   vec4 _one = { 1.0, 1.0, 1.0, 1.0 };
   vec4 alpha = { src[3], src[3], src[3], src[3] };
-  return src * alpha + dst * ( _one - alpha ) * dst;
+  return src * alpha + dst * (_one - alpha) * dst;
 }
 
 Pixels::Coord Pixels::Coord::lerp(const Coord &next, float alpha) const {
@@ -244,7 +244,6 @@ Bitmap::Bitmap(const std::vector<Uint8> &bmpData, std::string name) {
     source = std::move(name);
 }
 
-
 void Bitmap::save(std::string_view bmpFile) {
   if (surf && bmpFile.data())
     SDL_SaveBMP(surf, bmpFile.data());
@@ -323,6 +322,75 @@ Font::Font(std::string_view path, int size) {
     auto surf = TTF_RenderText_Solid(font, token,
                                      SDL_Color { 255, 255, 255, 255 });
     glyphs.push_back(surf);
+  }
+}
+
+void Font::render(SDL_Surface *dest, int x, int y, std::string_view text,
+                  Pixel24 color, bool inverted) {
+  if (dest->format->BytesPerPixel != 3 && dest->format->BytesPerPixel != 4)
+    return;
+  bool unlock = false;
+  if (SDL_MUSTLOCK(dest) && !dest->locked) {
+    unlock = true;
+    SDL_LockSurface(dest);
+  }
+
+  Uint8 *destData = reinterpret_cast<Uint8*>(dest->pixels);
+  int bypp = dest->format->BytesPerPixel;
+  int pitch = dest->pitch;
+  int xPos = x;
+  int yPos = y;
+
+  for (auto c : text) {
+    auto glyph = glyphs[c - ' '];
+    if (!glyph)
+      continue;
+    Uint8 *glpyhData = reinterpret_cast<Uint8*>(glyph->pixels);
+
+    for (int y = 0; y < glyph->h; y++) {
+      int yPlot = yPos + y;
+      if (yPlot < 0 || yPlot >= dest->h)
+        continue;
+      for (int x = 0; x < glyph->w; x++) {
+        int xPlot = xPos + x;
+        if (xPlot < 0 || xPlot >= dest->w)
+          continue;;
+        if (glpyhData[(inverted ? glyph->h - y - 1 : y) * glyph->pitch + x]) {
+          Pixel24 *destPixel = reinterpret_cast<Pixel24*>(&destData[yPlot
+              * pitch + xPlot * bypp]);
+          *destPixel = color;
+        }
+      }
+    }
+    xPos += glyph->w;
+  }
+  if (unlock)
+    SDL_UnlockSurface(dest);
+}
+
+void Font::render(Pixels &dest, int x, int y, std::string_view text,
+                  Pixel24 color) {
+  if (dest.bpp != 24 && dest.bpp != 32)
+    return;
+
+  int xPos = x;
+  int yPos = y;
+
+  for (auto c : text) {
+    auto glyph = glyphs[c - ' '];
+    if (!glyph)
+      continue;
+    Uint8 *glpyhData = reinterpret_cast<Uint8*>(glyph->pixels);
+
+    for (int y = 0; y < glyph->h; y++) {
+      for (int x = 0; x < glyph->w; x++) {
+        Uint8 mask = glpyhData[(dest.inverted ? glyph->h - y - 1 : y)
+            * glyph->pitch + x];
+        if (mask)
+          dest.plot(xPos+x, yPos+y, color);
+      }
+    }
+    xPos += glyph->w;
   }
 }
 

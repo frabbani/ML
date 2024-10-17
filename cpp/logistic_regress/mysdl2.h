@@ -134,8 +134,11 @@ struct Font {
   TTF_Font *font = nullptr;
   std::vector<SDL_Surface*> glyphs;
   Font(std::string_view path, int size);
+  void render(SDL_Surface *dest, int x, int y, std::string_view text, Pixel24 color, bool inverted = false);
+  void render(Pixels& bg, int x, int y, std::string_view text, Pixel24 color);
   ~Font();
 };
+
 
 struct SDL {
 

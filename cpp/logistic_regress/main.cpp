@@ -80,34 +80,8 @@ void drawText(const std::string &text, int x, int y) {
 
 void drawText(Pixels &pixels, const std::string &text, int x, int y,
               Pixel24 color) {
-  auto glyphs = sdl.fonts["night machine"]->glyphs;
+  sdl.fonts["night machine"]->render( pixels, x, y, text, color );
 
-  sdl2::Rect rect;
-  rect.x = x;
-  rect.y = y;
-  for (auto c : text) {
-    auto glyph = glyphs[c - ' '];
-    if (glyph) {
-      rect.w = glyph->w;
-      rect.h = glyph->h;
-      Uint8 *glpyhPixels = reinterpret_cast<Uint8*>(glyph->pixels);
-      for (int y = 0; y < glyph->h; y++) {
-        for (int x = 0; x < glyph->w; x++) {
-          int xLoc = rect.x + x;
-          int yLoc = rect.y + y;
-          if (pixels.inverted) {
-            if (glpyhPixels[(glyph->h - y - 1) * glyph->pitch + x] > 0)
-              pixels.plot(xLoc, yLoc, color);
-          } else {
-            if (glpyhPixels[y * glyph->pitch + x] > 0)
-              pixels.plot(xLoc, yLoc, color);
-          }
-
-        }
-      }
-      rect.x += glyph->w;
-    }
-  }
 }
 
 void init() {
