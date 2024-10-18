@@ -59,7 +59,7 @@ void renderTextSmall(Pixels &bg, int x, int y, Pixel24 color,
 }
 
 int iterationsCount = 0;
-const nn::Activation::Type activationType = nn::Activation::Type::Sigmoid;
+const nn::Activation::Type activationType = nn::Activation::Type::LeakyReLU;
 nn::NeuralNetwork neuralNetwork(activationType);
 
 double getTarget(double input) {
@@ -114,6 +114,7 @@ void draw() {
   Pixel24 targetColor(0, 128, 0);
   Pixel24 predictedColor(255, 120, 0);
   Pixel24 oobColor(100, 50, 0);
+  Pixel24 infoColor(50, 170, 255);
 
   int yBottom = DISP_W / 2 - DISP_W / 8;
   int yTop = yBottom + DISP_W / 2;
@@ -141,12 +142,11 @@ void draw() {
 
   renderTextSmall(bg, 95, DISP_H - 38, targetColor, "%s", "-5x");
   renderTextSmall(bg, 30, DISP_H - 50, targetColor, "%s", "y  =  e");
-  //renderText( bg, 25, 100, Pixel24(50, 170, 255), "%s", "ACTIVATION:  Leaky ReLU" );
   renderText(
       bg,
       25,
       100,
-      Pixel24(50, 170, 255),
+      infoColor,
       "%s: %s",
       "ACTIVATION",
       activationType == nn::Activation::Type::LeakyReLU ?
