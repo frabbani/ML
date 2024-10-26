@@ -13,3 +13,12 @@ The sigmoid activation function is particularly susceptible to this issue due to
 In contrast to the gradual nature, the output from the leaky ReLU activation appears more segmented and linear, providing a different perspective on how the network learns. As you watch the animation clips, you’ll see how the learning process refines itself to closely match the target function, highlighting the impact of the chosen activation function on the network's performance.
 
 I hope this demonstration sheds light on the fascinating dynamics of neural networks and the critical role activation functions play in shaping their learning capabilities.
+
+![image](https://github.com/user-attachments/assets/2bcd9252-3bb4-45dc-ac11-4225e974407f)
+
+![sigmoid](https://github.com/user-attachments/assets/9b4acc87-45c8-46ef-9723-cca1549f71b8)
+
+![leaky](https://github.com/user-attachments/assets/eedd2fd8-8b0a-4324-b47a-027de748bdb2)
+
+![image](https://github.com/user-attachments/assets/e5a3269a-3b77-45a0-98bb-9e2281256cbb)
+
