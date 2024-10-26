@@ -14,3 +14,8 @@ Key Takeaways:
 * K-Means is effective for identifying natural groupings in data.
 * The algorithm iteratively refines clusters until the best partitioning is achieved.
 * Visualizations can significantly enhance understanding of how the algorithm works.
+
+![k_means](https://github.com/user-attachments/assets/121d8c05-b12d-420a-aeb3-600c3aac6348)
+
+
+![image](https://github.com/user-attachments/assets/c98f8af1-60e9-4279-be44-8151396491e3)
