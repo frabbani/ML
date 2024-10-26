@@ -1,5 +1,5 @@
-LinkedIn
-https://www.linkedin.com/feed/update/urn:li:activity:7250662112367185920?utm_source=share&utm_medium=member_desktop
+
+From my [LinkedIn Post](https://www.linkedin.com/feed/update/urn:li:activity:7250662112367185920?utm_source=share&utm_medium=member_desktop)
 
 As I dive deeper into my machine learning journey, I've learned some valuable insights about K-Means clustering that I’d like to share. 😁 
 
@@ -22,3 +22,4 @@ Key Takeaways:
 
 
 ![image](https://github.com/user-attachments/assets/c98f8af1-60e9-4279-be44-8151396491e3)
+
