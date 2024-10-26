@@ -1,3 +1,6 @@
+LinkedIn
+https://www.linkedin.com/feed/update/urn:li:activity:7250662112367185920?utm_source=share&utm_medium=member_desktop
+
 As I dive deeper into my machine learning journey, I've learned some valuable insights about K-Means clustering that I’d like to share. 😁 
 
 K-Means is a powerful iterative algorithm used to classify data points within a given point cloud into a specified number of clusters. Its primary goal is to achieve optimal partitioning of the data by minimizing the variance within each cluster, thereby enhancing the quality of the grouping.
