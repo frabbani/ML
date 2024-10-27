@@ -15,3 +15,7 @@ This process demonstrates how logistic regression can effectively learn from dat
 #DataAnalytics
 #PredictiveModelling
 #Cpp
+
+![logistic_regress](https://github.com/user-attachments/assets/be9dd0d6-ab65-4f45-a3a4-9381dd887447)
+
+![code](https://github.com/user-attachments/assets/1f502ba3-96eb-451d-8865-348ec7f29a79)
