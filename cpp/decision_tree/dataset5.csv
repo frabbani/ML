@@ -1,0 +1,201 @@
+Age,Income,Education,Marital Status,Occupation,Label
+32,74700,High School,Widowed,Sales,No
+41,112200,Bachelors,Widowed,Lawyer,No
+38,101300,PhD,Married,Manager,Yes
+21,111700,PhD,Widowed,Manager,Yes
+28,138000,Masters,Single,Manager,Yes
+41,107500,High School,Divorced,Lawyer,No
+62,81500,PhD,Single,Manager,Yes
+53,50700,Masters,Married,Sales,No
+54,68600,PhD,Widowed,Sales,No
+24,53600,PhD,Widowed,Engineer,Yes
+49,63100,PhD,Widowed,Doctor,Yes
+50,100500,High School,Married,Sales,No
+28,66000,High School,Single,Doctor,No
+65,149900,Masters,Single,Teacher,Yes
+46,127900,PhD,Single,Teacher,Yes
+58,85800,Masters,Widowed,Teacher,Yes
+52,52300,Masters,Widowed,Artist,No
+43,74000,Bachelors,Widowed,Engineer,No
+59,54600,Masters,Divorced,Doctor,No
+33,78100,Bachelors,Widowed,Engineer,No
+52,125200,High School,Single,Artist,No
+51,146800,PhD,Widowed,Manager,Yes
+23,50400,Masters,Divorced,Artist,Yes
+57,111800,PhD,Married,Doctor,Yes
+25,145300,Masters,Single,Sales,Yes
+47,123300,PhD,Widowed,Artist,Yes
+65,70600,Masters,Married,Nurse,Yes
+57,88200,Bachelors,Divorced,Sales,No
+34,70700,Masters,Divorced,Nurse,Yes
+64,141900,High School,Single,Sales,No
+34,132400,High School,Widowed,Lawyer,No
+39,136300,Bachelors,Single,Nurse,Yes
+58,113500,Bachelors,Married,Teacher,No
+55,111900,Masters,Single,Engineer,Yes
+50,103800,High School,Single,Nurse,No
+18,115200,Masters,Widowed,Artist,Yes
+36,143100,Bachelors,Widowed,Manager,Yes
+44,146100,Masters,Divorced,Artist,Yes
+33,82900,High School,Single,Artist,No
+24,143400,PhD,Single,Teacher,Yes
+25,125300,Masters,Widowed,Manager,Yes
+26,104000,Masters,Single,Teacher,Yes
+40,78600,Bachelors,Married,Doctor,No
+63,145700,PhD,Single,Teacher,Yes
+34,120300,Bachelors,Married,Artist,Yes
+54,111300,Masters,Single,Nurse,Yes
+53,77000,High School,Single,Artist,No
+47,147100,PhD,Single,Sales,Yes
+24,99000,Masters,Single,Sales,Yes
+46,130100,Bachelors,Divorced,Teacher,Yes
+31,132700,Bachelors,Divorced,Sales,Yes
+18,141300,Bachelors,Divorced,Teacher,Yes
+59,96900,High School,Divorced,Artist,No
+37,138500,Masters,Single,Sales,Yes
+42,129200,High School,Single,Teacher,No
+61,142500,Bachelors,Married,Artist,Yes
+23,71400,Bachelors,Divorced,Lawyer,No
+36,105700,Masters,Widowed,Sales,Yes
+45,92300,Bachelors,Divorced,Lawyer,No
+64,70400,Bachelors,Single,Nurse,No
+51,90400,PhD,Widowed,Sales,Yes
+55,54700,Masters,Single,Manager,No
+32,122700,PhD,Divorced,Doctor,Yes
+29,111600,High School,Widowed,Doctor,Yes
+32,91600,PhD,Divorced,Manager,Yes
+36,133700,Bachelors,Divorced,Lawyer,Yes
+51,142500,PhD,Divorced,Sales,Yes
+25,108100,PhD,Widowed,Lawyer,Yes
+18,111700,Bachelors,Single,Artist,No
+60,143600,Bachelors,Divorced,Sales,Yes
+30,121200,PhD,Married,Artist,Yes
+37,133600,PhD,Married,Doctor,Yes
+54,140100,High School,Married,Teacher,No
+19,132000,Masters,Single,Nurse,Yes
+21,97100,Bachelors,Widowed,Doctor,Yes
+32,120800,Masters,Widowed,Nurse,Yes
+50,84900,High School,Widowed,Nurse,No
+43,149600,Masters,Married,Artist,Yes
+25,122100,Masters,Divorced,Sales,Yes
+52,111300,Masters,Single,Nurse,Yes
+19,127800,High School,Married,Sales,No
+35,77600,Masters,Married,Artist,Yes
+58,65600,Bachelors,Married,Nurse,No
+65,125600,High School,Divorced,Manager,No
+18,116600,PhD,Divorced,Teacher,Yes
+29,123500,Masters,Widowed,Nurse,Yes
+40,60800,Masters,Widowed,Artist,Yes
+21,103800,Masters,Married,Teacher,Yes
+62,142500,PhD,Single,Nurse,Yes
+20,65400,Bachelors,Married,Engineer,No
+27,88900,High School,Married,Manager,No
+43,124500,PhD,Married,Doctor,Yes
+32,110900,High School,Single,Nurse,No
+47,60500,High School,Single,Nurse,No
+30,61800,High School,Married,Manager,No
+33,147400,Masters,Single,Sales,Yes
+28,126300,High School,Widowed,Engineer,No
+38,95800,Bachelors,Widowed,Artist,No
+19,64200,High School,Single,Sales,No
+36,76600,Bachelors,Widowed,Sales,No
+19,72700,Masters,Single,Lawyer,Yes
+64,128600,High School,Divorced,Manager,No
+46,78800,High School,Widowed,Lawyer,No
+46,120500,Masters,Divorced,Engineer,Yes
+39,91200,Bachelors,Widowed,Engineer,Yes
+39,57100,Masters,Single,Lawyer,Yes
+38,78700,High School,Divorced,Lawyer,No
+25,86800,Masters,Married,Engineer,Yes
+59,117300,PhD,Widowed,Sales,Yes
+53,97900,High School,Divorced,Teacher,No
+25,70100,Masters,Divorced,Manager,Yes
+41,109800,Bachelors,Widowed,Manager,No
+65,136800,High School,Widowed,Teacher,No
+36,78700,PhD,Widowed,Manager,Yes
+52,142900,High School,Single,Sales,No
+26,102000,High School,Married,Engineer,Yes
+44,149900,Masters,Married,Nurse,Yes
+22,124000,High School,Divorced,Manager,No
+30,116100,PhD,Single,Lawyer,Yes
+60,58000,Masters,Married,Sales,No
+28,130800,Bachelors,Divorced,Engineer,Yes
+61,145500,High School,Single,Sales,No
+18,89000,High School,Single,Artist,No
+39,97600,Masters,Widowed,Manager,Yes
+23,114000,PhD,Married,Artist,Yes
+35,93800,Masters,Single,Artist,Yes
+36,111800,Bachelors,Single,Lawyer,No
+50,50300,Bachelors,Single,Teacher,No
+39,121700,Bachelors,Divorced,Engineer,Yes
+19,94900,Bachelors,Married,Sales,No
+32,80300,High School,Married,Engineer,Yes
+39,50200,PhD,Married,Doctor,Yes
+45,131100,Masters,Married,Sales,Yes
+20,96500,High School,Married,Nurse,No
+56,99700,PhD,Widowed,Teacher,Yes
+25,53600,High School,Single,Manager,No
+54,56600,Masters,Widowed,Sales,No
+41,110200,High School,Divorced,Sales,No
+36,138600,Masters,Married,Nurse,Yes
+46,121800,PhD,Divorced,Manager,Yes
+23,135200,PhD,Married,Doctor,Yes
+34,94800,PhD,Single,Artist,Yes
+45,68700,High School,Widowed,Artist,No
+46,143400,Bachelors,Widowed,Manager,Yes
+49,91900,Bachelors,Divorced,Lawyer,No
+49,79800,Masters,Divorced,Engineer,Yes
+48,140100,PhD,Married,Nurse,Yes
+45,64900,Masters,Widowed,Lawyer,Yes
+55,111000,PhD,Widowed,Engineer,Yes
+32,108900,Masters,Widowed,Lawyer,Yes
+25,126500,Masters,Divorced,Manager,Yes
+26,88200,Bachelors,Divorced,Doctor,Yes
+26,55100,Masters,Married,Engineer,Yes
+22,98600,High School,Single,Artist,No
+30,140700,PhD,Married,Lawyer,Yes
+47,117100,Masters,Married,Engineer,Yes
+39,66600,PhD,Widowed,Manager,Yes
+28,135800,Masters,Single,Sales,Yes
+24,73200,Masters,Married,Teacher,Yes
+53,50100,High School,Married,Nurse,No
+22,52600,High School,Single,Nurse,No
+20,129200,PhD,Widowed,Artist,Yes
+41,132500,Masters,Divorced,Manager,Yes
+20,128400,PhD,Widowed,Artist,Yes
+38,110100,Bachelors,Divorced,Artist,No
+61,106100,High School,Single,Teacher,No
+61,97000,Bachelors,Widowed,Lawyer,No
+31,95400,Masters,Single,Artist,Yes
+20,85500,Masters,Single,Teacher,Yes
+20,144100,High School,Married,Engineer,No
+51,91600,Bachelors,Married,Teacher,No
+22,80800,High School,Widowed,Lawyer,No
+49,99200,PhD,Married,Doctor,Yes
+48,119900,Bachelors,Single,Teacher,No
+29,107900,Bachelors,Single,Nurse,No
+28,52500,High School,Widowed,Artist,No
+36,55400,High School,Divorced,Nurse,No
+61,145300,Bachelors,Widowed,Artist,Yes
+45,72400,Bachelors,Divorced,Teacher,No
+58,95500,PhD,Divorced,Manager,Yes
+37,100300,High School,Married,Artist,No
+23,102400,Bachelors,Widowed,Manager,No
+26,66800,Masters,Divorced,Doctor,Yes
+35,149300,Masters,Divorced,Doctor,Yes
+55,59000,PhD,Married,Doctor,No
+24,109900,High School,Single,Nurse,No
+58,143200,High School,Single,Teacher,No
+50,68300,Masters,Married,Manager,Yes
+33,84000,Bachelors,Single,Lawyer,No
+47,145800,High School,Single,Sales,No
+34,149700,Masters,Single,Nurse,Yes
+24,97700,PhD,Divorced,Manager,Yes
+41,61500,High School,Single,Lawyer,No
+31,94600,Masters,Widowed,Doctor,Yes
+28,126800,PhD,Single,Manager,Yes
+26,143700,Masters,Divorced,Artist,Yes
+35,138800,Masters,Widowed,Nurse,Yes
+55,132000,PhD,Married,Doctor,Yes
+27,122100,Bachelors,Divorced,Manager,Yes
+24,117700,Masters,Single,Nurse,Yes
