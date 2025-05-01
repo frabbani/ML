@@ -21,12 +21,14 @@ struct Game {
     nn = new NN_neural_network_t;
 
     NN_info_t info;
-    info.activation = NN_tanh;
-    info.hidden_layers_size = 1;
+    info.activation = NN_relu;
     info.input_size = 4;
     info.output_size = 2;
+    info.hidden_layers_size = 2;
     for (int i = 0; i < info.hidden_layers_size; i++)
-      info.neurons_per[i] = 6;
+      info.neurons_per[i] = 8;
+    info.learning_rate = 0.003;
+    info.l2_decay = 0.0001;
     NN_init_neural_network(nn, &info);
 
     for (int i = 0; i < 512; i++) {
@@ -81,8 +83,7 @@ struct Game {
         nn->target[0] = d.x;
         nn->target[1] = d.y;
 
-        NN_forward_propagate(nn);
-        NN_backward_propagate(nn, learn);
+        NN_train_neural_network(nn);
         epochs++;
       }
     }
