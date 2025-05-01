@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include <mysdl2.h>	//https://github.com/frabbani/mysdl2
+#include "mysdl2.h"	//https://github.com/frabbani/mysdl2
 
 #define DISP_W 512
 #define DISP_H 512
