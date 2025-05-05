@@ -312,7 +312,7 @@ static void read_neuron_values(NN_neuron_t *neuron, const char *str) {
   int w = 0;
   neuron->bias = 0.0;  // Default in case B: isn't found
 
-  char tmp[1024];
+  char tmp[8 * 1024];
   strcpy(tmp, str);
   char *tok = strtok(tmp, " ");
   while (tok) {
@@ -337,7 +337,7 @@ void NN_import_neural_network(NN_neural_network_t **nn,
   FILE *fp = fopen(filename, "r");
   if (!fp)
     return;
-  char line[1024];
+  char line[8 * 1024];
 
   NN_info_t info;
   memset(&info, 0, sizeof(NN_info_t));
