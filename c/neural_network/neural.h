@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 #define NN_MAX_NEURONS 256
 #define NN_MAX_HIDDEN_LAYERS  16
 
@@ -31,7 +30,7 @@ typedef struct NN_neural_layer_s {
 } NN_neural_layer_t;
 
 typedef enum {
-  NN_sigmoid,
+  NN_sigmoid = 0,
   NN_tanh,
   NN_relu,
   NN_leakyrelu,
@@ -61,6 +60,8 @@ typedef struct {
 
 double NN_random(double scale, double offset);
 void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params);
+void NN_export_neural_network(NN_neural_network_t *nn, const char *filename);
+void NN_import_neural_network(NN_neural_network_t **nn, const char *filename);
 void NN_forward_propagate(NN_neural_network_t *nn);
 void NN_backward_propagate(NN_neural_network_t *nn);
 void NN_train_neural_network(NN_neural_network_t *nn);

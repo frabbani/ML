@@ -94,7 +94,8 @@ static void init_neuron(NN_neuron_t *neuron, int n) {
   neuron->bias = 0.0;
 }
 
-static void init_neural_layer(NN_neural_layer_t *layer, int size, NN_neural_layer_t *feed, int is_output) {
+static void init_neural_layer(NN_neural_layer_t *layer, int size,
+                              NN_neural_layer_t *feed, int is_output) {
   layer->type = is_output ? NN_output : NN_hidden;
   layer->size = size;
   CLAMP(layer->size, 1, NN_MAX_NEURONS);
@@ -106,7 +107,8 @@ static void init_neural_layer(NN_neural_layer_t *layer, int size, NN_neural_laye
   }
 }
 
-static void init_neural_first_hidden_layer(NN_neural_layer_t *layer, int size, int input_size, const double *input) {
+static void init_neural_first_hidden_layer(NN_neural_layer_t *layer, int size,
+                                           int input_size, const double *input) {
   layer->type = NN_first;
   layer->size = size;
   CLAMP(layer->size, 1, NN_MAX_NEURONS);
@@ -115,7 +117,8 @@ static void init_neural_first_hidden_layer(NN_neural_layer_t *layer, int size, i
     init_neuron(&layer->neurons[i], input_size);
 }
 
-static void neural_layer_propagate(NN_neural_layer_t *layer, int input_size, NN_activation_type_t act_type) {
+static void neural_layer_propagate(NN_neural_layer_t *layer, int input_size,
+                                   NN_activation_type_t act_type) {
   for (int i = 0; i < layer->size; i++) {
     NN_neuron_t *neuron = &layer->neurons[i];
     neuron->value = neuron->bias;
@@ -158,18 +161,22 @@ void NN_init_neural_network(NN_neural_network_t *nn, const NN_info_t *params) {
   nn->info.learning_rate = fabs(params->learning_rate);
   nn->info.l2_decay = fabs(params->l2_decay);
 
-  init_neural_first_hidden_layer(&nn->hidden_layers[0], nn->info.neurons_per[0], nn->info.input_size, nn->input);
+  init_neural_first_hidden_layer(&nn->hidden_layers[0], nn->info.neurons_per[0],
+                                 nn->info.input_size, nn->input);
 
   int nls = nn->info.hidden_layers_size;
   for (int i = 1; i < nls; i++) {
-    init_neural_layer(&nn->hidden_layers[i], nn->info.neurons_per[i], &nn->hidden_layers[i - 1], 0);
+    init_neural_layer(&nn->hidden_layers[i], nn->info.neurons_per[i],
+                      &nn->hidden_layers[i - 1], 0);
   }
-  init_neural_layer(&nn->output_layer, nn->info.output_size, &nn->hidden_layers[nls - 1], 1);
+  init_neural_layer(&nn->output_layer, nn->info.output_size,
+                    &nn->hidden_layers[nls - 1], 1);
 }
 
 void NN_forward_propagate(NN_neural_network_t *nn) {
   for (int i = 0; i < nn->info.hidden_layers_size; i++) {
-    neural_layer_propagate(&nn->hidden_layers[i], nn->input_size, nn->info.activation);
+    neural_layer_propagate(&nn->hidden_layers[i], nn->input_size,
+                           nn->info.activation);
   }
   neural_layer_propagate_regress(&nn->output_layer);
   for (int i = 0; i < nn->info.output_size; i++)
@@ -210,7 +217,8 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
   NN_neuron_t *last_hidden_neurons = last_hidden_layer->neurons;
   for (int i = 0; i < output_size; i++) {
     for (int j = 0; j < last_hidden_layer->size; j++) {
-      output_neurons[i].weights[j] -= learning_rate * output_error[i] * last_hidden_neurons[j].value;
+      output_neurons[i].weights[j] -= learning_rate * output_error[i]
+          * last_hidden_neurons[j].value;
     }
     output_neurons[i].bias -= learning_rate * output_error[i];
   }
@@ -238,7 +246,8 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
       for (int j = 0; j < next_layer->size; j++) {
         hidden_error[i] += hidden_error_next[j] * next_neurons[j].weights[i];
       }
-      hidden_error[i] *= act_deriv(curr_layer->neurons[i].value, nn->info.activation);
+      hidden_error[i] *= act_deriv(curr_layer->neurons[i].value,
+                                   nn->info.activation);
     }
 
     // update weights and bias
@@ -248,11 +257,14 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
       if (curr_layer->type > 0) {  // feed is previous layer
         NN_neural_layer_t *prev_layer = curr_layer->feed;
         for (int j = 0; j < prev_layer->size; j++) {
-          neuron->weights[j] -= learning_rate * (hidden_error[i] * prev_layer->neurons[j].value  - lambda * neuron->weights[j]);
+          neuron->weights[j] -= learning_rate
+              * (hidden_error[i] * prev_layer->neurons[j].value
+                  - lambda * neuron->weights[j]);
         }
       } else if (curr_layer->type == 0) {  // feed in the input
         for (int j = 0; j < nn->info.input_size; j++) {
-          neuron->weights[j] -= learning_rate * (hidden_error[i] * nn->input[j]  - lambda * neuron->weights[j]);
+          neuron->weights[j] -= learning_rate
+              * (hidden_error[i] * nn->input[j] - lambda * neuron->weights[j]);
         }
       }
     }
@@ -264,6 +276,122 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
 void NN_train_neural_network(NN_neural_network_t *nn) {
   NN_forward_propagate(nn);
   NN_backward_propagate(nn);
+}
+
+void NN_export_neural_network(NN_neural_network_t *nn,
+                                    const char *filename) {
+  FILE *fp = fopen(filename, "w");
+  if (!fp)
+    return;
+  fprintf(fp, "AC %d\n", nn->info.activation);
+  fprintf(fp, "L2 %lf\n", nn->info.l2_decay);
+  fprintf(fp, "LR %lf\n", nn->info.learning_rate);
+  fprintf(fp, "NI %d\n", nn->info.input_size);
+  fprintf(fp, "NO %d\n", nn->info.output_size);
+  fprintf(fp, "NH %d\n", nn->info.hidden_layers_size);
+  for (int i = 0; i < nn->info.hidden_layers_size; i++) {
+    fprintf(fp, "HID:\n");
+    int feed_size = (i == 0) ? nn->input_size : nn->hidden_layers[i - 1].size;
+    for (int j = 0; j < nn->hidden_layers[i].size; j++) {
+      for (int k = 0; k < feed_size; k++)
+        fprintf(fp, "W:%lf ", nn->hidden_layers[i].neurons[j].weights[k]);
+      fprintf(fp, "B:%lf\n", nn->hidden_layers[i].neurons[j].bias);
+    }
+  }
+  fprintf(fp, "OUT:\n");
+  for (int j = 0; j < nn->output_layer.size; j++) {
+    for (int k = 0; k < nn->output_layer.feed->size; k++)
+      fprintf(fp, "W:%lf ", nn->output_layer.neurons[j].weights[k]);
+    fprintf(fp, "B:%lf\n", nn->output_layer.neurons[j].bias);
+  }
+
+  fclose(fp);
+}
+
+static void read_neuron_values(NN_neuron_t *neuron, const char *str) {
+  int w = 0;
+  neuron->bias = 0.0;  // Default in case B: isn't found
+
+  char tmp[1024];
+  strcpy(tmp, str);
+  char *tok = strtok(tmp, " ");
+  while (tok) {
+    if (tok[0] == 'W' && tok[1] == ':')
+      neuron->weights[w++] = atof(tok + 2);
+    if (tok[0] == 'B' && tok[1] == ':')
+      neuron->bias = atof(tok + 2);
+    tok = strtok(NULL, " \n");
+  }
+}
+
+void NN_import_neural_network(NN_neural_network_t **nn,
+                                      const char *filename) {
+  if (!nn)
+    return;
+
+  if (*nn) {
+    free(*nn);
+    *nn = NULL;
+  }
+
+  FILE *fp = fopen(filename, "r");
+  if (!fp)
+    return;
+  char line[1024];
+
+  NN_info_t info;
+  memset(&info, 0, sizeof(NN_info_t));
+
+  while (fgets(line, sizeof(line), fp)) {
+    if (0 == strncmp(line, "AC", 2)) {
+      sscanf(line, "AC %d", (int*) &info.activation);
+    } else if (0 == strncmp(line, "L2", 2)) {
+      sscanf(line, "L2 %lf", &info.l2_decay);
+    } else if (0 == strncmp(line, "LR", 2)) {
+      sscanf(line, "LR %lf", &info.learning_rate);
+    } else if (0 == strncmp(line, "NI", 2)) {
+      sscanf(line, "NI %d", &info.input_size);
+    } else if (0 == strncmp(line, "NO", 2)) {
+      sscanf(line, "NO %d", &info.output_size);
+    } else if (0 == strncmp(line, "HID:", 4)) {
+      info.hidden_layers_size++;
+    }
+  }
+  fseek(fp, 0, SEEK_SET);
+  int l = -1;
+  while (fgets(line, sizeof(line), fp)) {
+    if (0 == strncmp(line, "OUT:", 4))
+      break;
+    if (0 == strncmp(line, "HID:", 4)) {
+      l++;
+      info.neurons_per[l] = 0;
+    } else if ('W' == line[0])
+      info.neurons_per[l]++;
+  }
+  fseek(fp, 0, SEEK_SET);
+
+  *nn = (NN_neural_network_t*) calloc(1, sizeof(NN_neural_network_t));
+  NN_neural_network_t *network = *nn;
+  NN_init_neural_network(network, &info);
+
+  l = -1;
+  int n = 0;
+  while (fgets(line, sizeof(line), fp)) {
+    if (0 == strncmp(line, "OUT:", 4))
+      break;
+    if (0 == strncmp(line, "HID:", 4)) {
+      l++;
+      n = 0;
+    } else if ('W' == line[0])
+      read_neuron_values(&(*nn)->hidden_layers[l].neurons[n++], line);
+  }
+  n = 0;
+  while (fgets(line, sizeof(line), fp)) {
+    if ('W' == line[0])
+      read_neuron_values(&(*nn)->output_layer.neurons[n++], line);
+  }
+
+  fclose(fp);
 }
 
 #pragma GCC diagnostic pop
