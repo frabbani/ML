@@ -26,12 +26,12 @@ struct Game {
     info.output_size = 2;
     info.hidden_layers_size = 2;
     for (int i = 0; i < info.hidden_layers_size; i++)
-      info.neurons_per[i] = 8;
-    info.learning_rate = 0.003;
+      info.neurons_per[i] = 2;
+    info.learning_rate = 0.03;
     info.l2_decay = 0.0001;
     NN_init_neural_network(nn, &info);
 
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < 256; i++) {
       Vector2 v;
       v.x = NN_random(1, -0.5);
       v.y = NN_random(1, -0.5);
@@ -40,19 +40,6 @@ struct Game {
       v.y = NN_random(1, -0.5);
       trainingPts2.push_back(v);
     }
-  }
-
-  Vector2 targetSetup() {
-    Vector2 d;
-    if (runner.x < chaser.x)
-      d.x = -1.0;
-    if (runner.x > chaser.x)
-      d.x = +1.0;
-    if (runner.y < chaser.y)
-      d.y = -1.0;
-    if (runner.y > chaser.y)
-      d.y = +1.0;
-    return d;
   }
 
   void trainChaser() {
@@ -85,9 +72,25 @@ struct Game {
 
         NN_train_neural_network(nn);
         epochs++;
+
+        nn->input[0] = p2.x;
+        nn->input[1] = p2.y;
+        nn->input[2] = p.x;
+        nn->input[3] = p.y;
+
+        d = setup_target();
+        nn->target[0] = d.x;
+        nn->target[1] = d.y;
+
+        NN_train_neural_network(nn);
+        epochs++;
       }
     }
     printf("# of epochs: %zu\n", epochs);
+  }
+
+  void loadChaser() {
+    NN_import_neural_network(&nn, "nn.txt");
   }
 
   void chase() {
@@ -98,18 +101,18 @@ struct Game {
 
     NN_forward_propagate(nn);
 
-    float x = nn->prediction[0];  // < -0.5f ? -1.0f : nn->prediction[0] > 0.5f ?  +1.0f : 0.0f;
-    float y = nn->prediction[1];  // < -0.5f ? -1.0f : nn->prediction[1] > 0.5f ?  +1.0f : 0.0f;
+    float x = nn->prediction[0];
+    float y = nn->prediction[1];
 
     chaser = chaser + Vector2(x, y) * 0.005;
-
-//    printf("step %d\n", steps);
-//    printf(" * input...: %lf, %lf\n", nn->prediction[0], nn->prediction[1]);
-//    printf(" * position: %lf, %lf\n", chaser.x, chaser.y);
   }
 
   ~Game() {
-    delete nn;
+    if (nn) {
+      NN_export_neural_network(nn, "nn.txt");
+      delete nn;
+      nn = nullptr;
+    }
   }
 }
 ;

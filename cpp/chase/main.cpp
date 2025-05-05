@@ -18,10 +18,12 @@ SDL sdl;
 
 Game g;
 bool paused = true;
+bool drawTrainingData = false;
 
 void init() {
   printf("*** INIT ***\n");
-  g.trainChaser();
+  //g.trainChaser();
+  g.loadChaser();
   g.runner = Vector2(0.0, 0.0);
   g.chaser = Vector2(-0.45, -0.45);
   paused = true;
@@ -43,6 +45,9 @@ void step() {
     y++;
   if (sdl.keyDown(SDLK_DOWN))
     y--;
+
+  if(sdl.keyPress(SDLK_d))
+    drawTrainingData = !drawTrainingData;
 
   g.run(x, y, 0.01);
   g.chase();
@@ -66,27 +71,29 @@ void draw() {
   Vector2 p;
   Vector2 center = { DISP_W / 2, DISP_H / 2 };
 
-#if 0
-  for (auto v : g.trainingPts) {
-    p.x = v.x * DISP_W;
-    p.y = v.y * DISP_H;
-    draw_box(center + p, 3, 3, Pixel24(250, 84, 84));
+  if (!drawTrainingData) {
+    p.x = g.runner.x * DISP_W;
+    p.y = g.runner.y * DISP_H;
+    draw_box(center + p, 16, 16, Pixel24(123, 115, 170));
+
+    p.x = g.chaser.x * DISP_W;
+    p.y = g.chaser.y * DISP_H;
+    draw_box(center + p, 24, 25, Pixel24(183, 18, 98));
+  }
+  else{
+    for (auto v : g.trainingPts) {
+      p.x = v.x * DISP_W;
+      p.y = v.y * DISP_H;
+      draw_box(center + p, 3, 3, Pixel24(250, 84, 84));
+    }
+
+    for (auto v : g.trainingPts2) {
+      p.x = v.x * DISP_W;
+      p.y = v.y * DISP_H;
+      draw_box(center + p, 3, 3, Pixel24(84, 84, 250));
+    }
   }
 
-  for (auto v : g.trainingPts2) {
-    p.x = v.x * DISP_W;
-    p.y = v.y * DISP_H;
-    draw_box(center + p, 3, 3, Pixel24(84, 84, 250));
-  }
-#endif
-
-  p.x = g.runner.x * DISP_W;
-  p.y = g.runner.y * DISP_H;
-  draw_box(center + p, 16, 16, Pixel24(123, 115, 170));
-
-  p.x = g.chaser.x * DISP_W;
-  p.y = g.chaser.y * DISP_H;
-  draw_box(center + p, 24, 25, Pixel24(183, 18, 98));
 }
 
 void term() {
