@@ -17,14 +17,17 @@
 static MTRand mt_rand;
 int mt_inited = 0;
 
+void NN_seed_random(unsigned long seed) {
+  mt_rand = seedRand(seed);
+  mt_inited = 1;
+}
+
 double NN_random(double scale, double offset) {
   if (!mt_inited) {
     mt_rand = seedRand(time(0));
     mt_inited = 1;
   }
-  double g = (double) genRandLong(&mt_rand) / (double) 0xffffffff;
-  ;
-  return g * scale + offset;
+  return genRand(&mt_rand) * scale + offset;
 }
 
 static double sigmoid_act(double x) {
@@ -278,14 +281,13 @@ void NN_train_neural_network(NN_neural_network_t *nn) {
   NN_backward_propagate(nn);
 }
 
-void NN_export_neural_network(NN_neural_network_t *nn,
-                                    const char *filename) {
+void NN_export_neural_network(NN_neural_network_t *nn, const char *filename) {
   FILE *fp = fopen(filename, "w");
   if (!fp)
     return;
   fprintf(fp, "AC %d\n", nn->info.activation);
-  fprintf(fp, "L2 %lf\n", nn->info.l2_decay);
-  fprintf(fp, "LR %lf\n", nn->info.learning_rate);
+  fprintf(fp, "L2 %+.17g\n", nn->info.l2_decay);
+  fprintf(fp, "LR %+.17g\n", nn->info.learning_rate);
   fprintf(fp, "NI %d\n", nn->info.input_size);
   fprintf(fp, "NO %d\n", nn->info.output_size);
   fprintf(fp, "NH %d\n", nn->info.hidden_layers_size);
@@ -294,15 +296,15 @@ void NN_export_neural_network(NN_neural_network_t *nn,
     int feed_size = (i == 0) ? nn->input_size : nn->hidden_layers[i - 1].size;
     for (int j = 0; j < nn->hidden_layers[i].size; j++) {
       for (int k = 0; k < feed_size; k++)
-        fprintf(fp, "W:%lf ", nn->hidden_layers[i].neurons[j].weights[k]);
-      fprintf(fp, "B:%lf\n", nn->hidden_layers[i].neurons[j].bias);
+        fprintf(fp, "W:%+.17g ", nn->hidden_layers[i].neurons[j].weights[k]);
+      fprintf(fp, "B:%+.17g\n", nn->hidden_layers[i].neurons[j].bias);
     }
   }
   fprintf(fp, "OUT:\n");
   for (int j = 0; j < nn->output_layer.size; j++) {
     for (int k = 0; k < nn->output_layer.feed->size; k++)
-      fprintf(fp, "W:%lf ", nn->output_layer.neurons[j].weights[k]);
-    fprintf(fp, "B:%lf\n", nn->output_layer.neurons[j].bias);
+      fprintf(fp, "W:%.17g ", nn->output_layer.neurons[j].weights[k]);
+    fprintf(fp, "B:%.17g\n", nn->output_layer.neurons[j].bias);
   }
 
   fclose(fp);
@@ -324,8 +326,7 @@ static void read_neuron_values(NN_neuron_t *neuron, const char *str) {
   }
 }
 
-void NN_import_neural_network(NN_neural_network_t **nn,
-                                      const char *filename) {
+void NN_import_neural_network(NN_neural_network_t **nn, const char *filename) {
   if (!nn)
     return;
 
@@ -346,9 +347,9 @@ void NN_import_neural_network(NN_neural_network_t **nn,
     if (0 == strncmp(line, "AC", 2)) {
       sscanf(line, "AC %d", (int*) &info.activation);
     } else if (0 == strncmp(line, "L2", 2)) {
-      sscanf(line, "L2 %lf", &info.l2_decay);
+      sscanf(line, "L2 %lg", &info.l2_decay);
     } else if (0 == strncmp(line, "LR", 2)) {
-      sscanf(line, "LR %lf", &info.learning_rate);
+      sscanf(line, "LR %lg", &info.learning_rate);
     } else if (0 == strncmp(line, "NI", 2)) {
       sscanf(line, "NI %d", &info.input_size);
     } else if (0 == strncmp(line, "NO", 2)) {
@@ -370,7 +371,7 @@ void NN_import_neural_network(NN_neural_network_t **nn,
   }
   fseek(fp, 0, SEEK_SET);
 
-  *nn = (NN_neural_network_t*) calloc(1, sizeof(NN_neural_network_t));
+  *nn = (NN_neural_network_t*) malloc(sizeof(NN_neural_network_t));
   NN_neural_network_t *network = *nn;
   NN_init_neural_network(network, &info);
 

@@ -69,8 +69,8 @@ unsigned long genRandLong(MTRand* rand) {
 }
 
 /**
- * Generates a pseudo-randomly generated double in the range [0..1].
+ * Generates a pseudo-randomly generated double in the range [0..1).
  */
 double genRand(MTRand* rand) {
-  return (double)genRandLong(rand) / (double)0xffffffff;
+  return (double)genRandLong(rand) / 4294967296.0;
 }
