@@ -46,6 +46,9 @@ struct Vector2 {
     return r;
   }
 
+  Vector2 point(const Vector2& to){
+    return to - *this;
+  }
 };
 
 Vector2 operator *(float s, const Vector2& rhs ){

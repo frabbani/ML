@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include <mysdl2.h>	//https://github.com/frabbani/mysdl2
+#include "mysdl2.h"	//https://github.com/frabbani/mysdl2
 
 #define DISP_W 512
 #define DISP_H 512
@@ -31,13 +31,27 @@ void step() {
     paused = !paused;
   if (paused)
     return;
-  if( sdl.keyPress(SDLK_r)){
+  if (sdl.keyPress(SDLK_r)) {
     g.explorer.reset();
-  }
-
-  if( sdl.keyPress(SDLK_c)){
     g.map.clearVisited();
   }
+
+  if (sdl.keyPress(SDLK_c)) {
+    g.map.clearVisited();
+  }
+
+  if (sdl.mouseKeyPress(0)) {
+    printf("%d, %d\n", sdl.mouseX, sdl.mouseY);
+    g.explorer.addBlocker(Vector2(double(sdl.mouseX), double(sdl.mouseY)));
+  }
+
+  if (sdl.mouseKeyDown(2)) {
+    printf("%d, %d\n", sdl.mouseX, sdl.mouseY);
+    //g.explorer.pull = Vector2(double(sdl.mouseX), double(sdl.mouseY));
+    g.explorer.reset(Vector2(double(sdl.mouseX), double(sdl.mouseY)));
+    g.map.clearVisited();
+  } else
+    g.explorer.pull = std::nullopt;
   g.explore();
 }
 
@@ -45,8 +59,8 @@ void draw() {
   auto pixels = sdl.lock();
   for (int y = 0; y < pixels.h; y++)
     for (int x = 0; x < pixels.w; x++) {
-      if( g.map.visited(x, y) )
-        pixels.plot(x, y, 128, 0, 64 );
+      if (g.map.visited(x, y))
+        pixels.plot(x, y, 128, 0, 64);
       else
         pixels.plot(x, y, g.map.drawColor(x, y));
     }
@@ -59,8 +73,19 @@ void draw() {
       }
   };
 
+  for (auto b : g.explorer.blockers)
+    draw_faded_box(b, 3, g.explorer.blockerColor(), 0.5);
+
   draw_faded_box(g.explorer.p, 4, g.explorer.color(), 1.0);
-  draw_faded_box(g.explorer.c, 3, g.explorer.color(), 0.25);
+  draw_faded_box(g.explorer.c, 3, g.explorer.color(), 0.6);
+  draw_faded_box(g.explorer.c2, 3, g.explorer.color(), 0.3);
+
+//  for (auto d : directions) {
+//    Vector2 p = g.explorer.p;
+//    Vector2 p2 = g.explorer.p + d * g.map.radius();
+//    p = p + g.map.traceLine(p, p2) * p.point(p2);
+//    draw_faded_box(p, 2, g.explorer.color(), 0.3);
+//  }
 
 }
 

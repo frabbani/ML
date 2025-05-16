@@ -1,10 +1,11 @@
 #pragma once
 
-#include <mysdl2.h>
+#include "mysdl2.h"
 using namespace sdl2;
 
 #include "vector.h"
-#include "neural.h"
+#include "reinforce.h"
+#include <optional>
 
 #define PI 3.14159265358979
 
@@ -35,7 +36,7 @@ std::vector<Vector2> directions;
 
 void initDirections() {
   directions.clear();
-  for (int i = 0; i < 360; i += 15) {
+  for (int i = 0; i < 360; i += 30) {
     float angle = i;
     Vector2 v;
     v.x = cosf(angle * PI / 180.0f);
@@ -51,6 +52,7 @@ struct Game {
   Game() {
     initDirections();
   }
+  int ticks = 0;
 
   struct Map {
     int w = 0, h = 0;
@@ -58,6 +60,7 @@ struct Game {
     std::vector<int> points;
     Vector2 origin;
     Vector2 target;
+
     std::vector<Pixel24> colors;
     std::vector<int> visits;
     void init(std::string_view file) {
@@ -86,7 +89,7 @@ struct Game {
           colors[y * w + x] = pix;
         }
       bitmap.unlock();
-      downscale = 1.0 / sqrt(w * w + h * h);
+      downscale = 1.0 / radius();
 
       origin = origin * (1.0 / tot);
       target = target * (1.0 / tot2);
@@ -94,6 +97,12 @@ struct Game {
       printf("origin.: { %d, %d }\n", int(origin.x), int(origin.y));
       printf("target.: { %d, %d }\n", int(target.x), int(target.y));
 
+    }
+    double radiusSq() {
+      return double(w * w + h * h);
+    }
+    double radius() {
+      return sqrt(radiusSq());
     }
 
     bool oob(int x, int y) {
@@ -123,14 +132,21 @@ struct Game {
         Vector2 u = LERP(p, p2, alpha2);
 
         int x = (int) u.x;
-        int x2 = u.x > x ? x + 1 : x;
+        int x2 = u.x > x ? x + 1 : u.x < x ? x - 1 : x;
         int y = (int) u.y;
-        int y2 = u.y > y ? y + 1 : y;
+        int y2 = u.y > y ? y + 1 : u.y < y ? y - 1 : y;
 
         if (oob(x, y) || oob(x2, y) || oob(x, y2) || oob(x2, y2))
           return alpha;
       }
       return 1.0;
+    }
+
+    float traceDist(Vector2 p, Vector2 d) {
+      // modified Bresenham
+      Vector2 p2 = p + radius() * d;
+      float alpha = traceLine(p, p2);
+      return alpha * p.point(p2).length();
     }
 
     Pixel24 drawColor(int x, int y) {
@@ -157,28 +173,42 @@ struct Game {
   };
 
   struct Agent {
-    static constexpr double ewmaWeight = 0.01;
-    static constexpr double maxDist = 16.0;
-    static constexpr double lingerDist = 4.0;
-    Vector2 p;
-    Vector2 c;
-    int action = 0;
+    static constexpr double ewma = 0.03;
+    static constexpr double ewma2 = 0.005;
+    static constexpr double maxDist = 8.0;
+    static constexpr double lingerDist = 5.0;
+    static constexpr double linger2Dist = 9.0;
+    static constexpr double markDist = 16.0;
+
+    Vector2 p;              // position
+    Vector2 c;              // short term history
+    Vector2 c2;             // long term history
+    std::array<Vector2, 8> blockers;
+    double stall = 0.0;
+    int steps = 0;
     Map *map;
     void init(Map &map_) {
       this->map = &map_;
       reset();
     }
 
-    void reset() {
+    int actionTaken;
+
+    std::optional<Vector2> pull = std::nullopt;
+
+    void reset(std::optional<Vector2> loc = std::nullopt) {
       if (map) {
-        action = rand() % directions.size();
-        p = map->origin;
-        c = p - directions[action] * (3.0 * lingerDist);
+        actionTaken = rand() % directions.size();
       }
+      p = c = c2 = loc.value_or(map->origin);
+      for (auto &blocker : blockers)
+        blocker = map->origin;
+      stall = 0.0;
+      steps = 0;
     }
 
     Vector2 d() {
-      return directions[action];
+      return directions[actionTaken];
     }
 
     void step() {
@@ -186,172 +216,392 @@ struct Game {
       map->visit(p.x, p.y);
       auto d = p - c;
       if (d.dot(d) >= (lingerDist * lingerDist))
-        c = LERP(c, p, ewmaWeight);
+        c = LERP(c, p, ewma);
+      d = p - c2;
+      if (d.dot(d) >= (linger2Dist * linger2Dist))
+        c2 = LERP(c2, p, ewma2);
+      stall += 0.001;
+      steps++;
     }
 
+    bool lineOfSight(Vector2 target) {
+      return map->traceLine(p, target) < 1.0 ? false : true;
+    }
+
+    void addBlocker(Vector2 v) {
+      //Vector2 e = p + maxDist * v;
+      //float alpha = map->traceLine(p, e);
+      //v = p + alpha * (p.point(e));
+      static int c = 0;
+      int n = int(blockers.size());
+      c++;
+      c %= n;
+      blockers[c] = v;
+    }
+
+    void maybeAddBlocker() {
+      static int counter = 0;
+      Vector2 u = p.point(c);
+      if (u.dot(u) > markDist * markDist)
+        counter = 0;
+      else {
+        counter++;
+        if (counter > 50) {
+          addBlocker(c);
+          counter = -50 * 10;
+        }
+      }
+    }
     double reward() {
       double exitReward = 0.0;
       double lingerPenalty = 0.0;
       double hitPenalty = 0.0;
       double projection = 0.0;
+      double repelPenalty = 0.0;
+      double pullReward = 0.0;
 
-      auto dir = map->target - p;  // point towards exit
-      double lenSq = dir.dot(dir);
-      if (lenSq < maxDist * maxDist)
-        exitReward = 1;
-      else {
-        double len = sqrt(lenSq);
-        exitReward = (1.0 - len * map->downscale);
-        projection = dir.normalized().dot(directions[action]);
-        exitReward *= projection;
-      };
+      maybeAddBlocker();
+
+      Vector2 dir;
+      Vector2 dirnorm;
+      double lenSq = 0.0;
+      Vector2 act = directions[actionTaken];
+
+      dir = p.point(map->target);
+      dirnorm = dir.normalized();
+      exitReward = 1.0
+          - (dir.dot(act)) / double(map->w * map->w + map->h * map->h);
+      CLAMP(exitReward, 0.0, 1.0);
+      double facingReward = dirnorm.dot(act);
+      CLAMP(facingReward, 0.0, 1.0);
+      hitPenalty = traceHit();
+      exitReward = 0.3 * exitReward + facingReward - 1.3 * hitPenalty;
+
+      /*
+       exitReward = 1.0;
+       projection = (map->target - p).normalized().dot(act);
+       CLAMP(projection, -0.1, 1.0);
+       exitReward *= projection;
+       */
+
+      //if (!lineOfSight(map->target))
+      //  exitReward *= 0.6f;
+//      for (auto r : repellants) {
+//        Vector2 to = r - p;
+//        lenSq = to.dot(to);
+//        if (lenSq > lingerDist * lingerDist) {
+//          double len = sqrt(lenSq);
+//          projection = to.normalized().dot(act);
+//          CLAMP(projection, 0.0, 1.0);
+//          float factor = (1.0 - len * map->downscale);
+//          CLAMP(factor, 0.0, 1.0);
+//          factor *= lineOfSight(r) ? 1.0 : 0.0;
+//          repelPenalty += factor * projection;
+//        } else
+//          repelPenalty += 1.0;
+//      }
+      if (pull.has_value()) {
+        Vector2 to = *pull - p;
+        lenSq = to.dot(to);
+        if (lenSq > 0.0 && lenSq > lingerDist * lingerDist) {
+          projection = to.normalized().dot(act);
+          CLAMP(projection, 0.0, 1.0);
+          pullReward = projection;
+        }
+      }
 
       dir = c - p;  // point towards center
       lenSq = dir.dot(dir);
-      if (lenSq <= lingerDist * lingerDist) {
+      if (lenSq > 0.0 && lenSq <= lingerDist * lingerDist) {
         lingerPenalty = 1.0;
-        projection = dir.normalized().dot(directions[action]);
+        projection = dir.normalized().dot(act);
         CLAMP(projection, 0.0, 1.0);
         lingerPenalty *= projection;
       }
 
-      hitPenalty = (1.0 - traceLine());
+      hitPenalty = traceHit();
 
-      double reward = exitReward - 0.3 * lingerPenalty - 0.1 * hitPenalty;
-      //printf("cumulative reward %lf\n", reward);
-      //printf(" * exit..: %lf\n", exitReward);
-      //printf(" * linger: %lf\n", lingerPenalty);
-      //printf(" * hit...: %lf\n", hitPenalty);
+      double reward = exitReward + 2.0 * pullReward - 0.9 * hitPenalty
+          - 0.1 * lingerPenalty - 0.7 * repelPenalty;
+
       CLAMP(reward, -1.0, 1.0);
       return reward;
 
     }
 
-    bool traceHit() {
-      Vector2 p2 = p + maxDist * d();
-      float alpha = map->traceLine(p, p2);
-      return alpha < 1.0;
+    double simpleReward() {
+      //use with test map
+      Vector2 d = map->target - p;
+      Vector2 dnorm = d.normalized();
+      Vector2 v = directions[actionTaken];
+
+      double proxReward = 1.0
+          - (d.dot(d)) / double(map->w * map->w + map->h * map->h);
+      CLAMP(proxReward, 0.0, 1.0);
+
+      double facingReward = dnorm.dot(v);
+      CLAMP(facingReward, 0.0, 1.0);
+
+      // Final reward
+      return proxReward * 0.3 + facingReward;
     }
 
-    float traceLine() {
-      Vector2 p2 = p + maxDist * d();
+    double stagnate(double radius) {
+      double len = (p - c).length();
+      double len2 = (p - c2).length();
+
+      return 1.0 - 0.5 * (len / radius + len2 / radius);
+      // Both distances must be small to apply penalty
+      if (len < lingerDist && len2 < linger2Dist)
+        return 1.0
+            - 0.5 * ((len / lingerDist) * 0.5 - (len2 / linger2Dist) * 0.5);
+
+      return 0.0;
+    }
+
+    double proximity(Vector2 e, Vector2 v, float radiusSq) {
+      Vector2 d = p.point(e);
+      Vector2 dnorm = d.normalized();
+
+      double reward = 1.0 - (d.dot(d) / radiusSq);
+      CLAMP(reward, 0.0, 1.0);
+
+      double facingReward = dnorm.dot(v);
+      CLAMP(facingReward, 0.0, 1.0);
+
+      double hitPenalty = map->traceLine(p, p + maxDist * v) < 1.0;
+      //return 0.3 * reward + facingReward - 1.3 * hitPenalty;
+      return reward + 0.3 * facingReward - 0.3 * hitPenalty;
+    }
+
+    double proximity2(Vector2 e, Vector2 v, float radiusSq) {
+      if (map->traceLine(p, e) < 0.0)
+        return 0.0;
+
+      Vector2 d = p.point(e);
+      Vector2 dnorm = d.normalized();
+      if (d.dot(d) < lingerDist * lingerDist)
+        return 1.0;
+
+      double reward = 1.0 - (d.dot(d) / radiusSq);
+      CLAMP(reward, 0.0, 1.0);
+
+      double facingReward = dnorm.dot(v) > 0.0 ? 1.0 : 0.0;
+
+      return 0.9 * reward + 0.1 * facingReward;
+    }
+
+    double backtrack(Vector2 v) {
+      if ((p - c).length() < lingerDist && (p - c2).length() < linger2Dist) {
+        Vector2 d = p.point(c2);
+        double tug = v.dot(d.normalized());  // higher if facing away
+        return tug;
+      }
+      return 0.0;
+    }
+
+    double avoidReward() {
+      return proximity(map->target, directions[actionTaken], map->radiusSq());
+    }
+
+    double keepMovingReward() {
+      return proximity(map->target, directions[actionTaken], map->radiusSq())
+          - 0.2 * proximity(c, directions[actionTaken], map->radiusSq())
+          - 0.2 * proximity(c2, directions[actionTaken], map->radiusSq())
+          - stall;
+    }
+
+    double smartReward() {
+      maybeAddBlocker();
+
+      Vector2 v = directions[actionTaken];
+
+      //if(traceHit(v) < 1.0)
+      //  return 0.0;
+
+      double blockerPenalty = 0.0;
+      int n = int(blockers.size());
+      for (int i = 0; i < n; i++) {
+        Vector2 b = blockers[i];
+        blockerPenalty += proximity(b, v, map->radiusSq());
+      }
+
+      return keepMovingReward() - 0.7 / double(n) * blockerPenalty;
+
+      //double lingerPenalty = 0.0;
+      //Vector2 d = p.point(c);  // point towards center
+      //lingerPenalty += proximity(c, v, map->radiusSq());
+
+//      if (lenSq > 0.0 && lenSq <= lingerDist * lingerDist) {
+//        lingerPenalty = 1.0;
+//        projection = dir.normalized().dot(act);
+//        CLAMP(projection, 0.0, 1.0);
+//        lingerPenalty *= projection;
+//      }
+
+      //return exitReward - 3.0 * blockerPenalty / double(n);  //- 0.3 * lingerPenalty;
+
+      //if (!lineOfSight(map->target))
+      //  exitReward *= 0.6f;
+
+//      for (auto r : repellants) {
+//        Vector2 to = r - p;
+//        lenSq = to.dot(to);
+//        if (lenSq > lingerDist * lingerDist) {
+//          double len = sqrt(lenSq);
+//          projection = to.normalized().dot(act);
+//          CLAMP(projection, 0.0, 1.0);
+//          float factor = (1.0 - len * map->downscale);
+//          CLAMP(factor, 0.0, 1.0);
+//          factor *= lineOfSight(r) ? 1.0 : 0.0;
+//          repelPenalty += factor * projection;
+//        } else
+//          repelPenalty += 1.0;
+//      }
+
+//      if (pull.has_value()) {
+//        Vector2 to = *pull - p;
+//        lenSq = to.dot(to);
+//        if (lenSq > 0.0 && lenSq > lingerDist * lingerDist) {
+//          projection = to.normalized().dot(act);
+//          CLAMP(projection, 0.0, 1.0);
+//          pullReward = projection;
+//        }
+//      }
+//
+
+//      hitPenalty = traceHit();
+//
+//      double reward = exitReward + 2.0 * pullReward - 0.9 * hitPenalty
+//          - 0.1 * lingerPenalty - 0.7 * repelPenalty;
+//
+//      CLAMP(reward, -1.0, 1.0);
+//      return reward;
+
+    }
+
+    float traceLine(std::optional<Vector2> direction = std::nullopt) {
+      Vector2 p2 = p + maxDist * direction.value_or(d());
       return map->traceLine(p, p2);
     }
 
-    void nnSetup(NN_neural_network_t *nn) {
+    bool traceHit(std::optional<Vector2> direction = std::nullopt) {
+      Vector2 p2 = p + maxDist * direction.value_or(d());
+      return map->traceLine(p, p2) < 1.0;
+    }
+
+    float traceSight(std::optional<Vector2> direction = std::nullopt) {
+      Vector2 p2 = p + map->radius() * direction.value_or(d());
+      return map->traceLine(p, p2);
+    }
+
+    int nnSetup(double *inputValues) {
       // normalize inputs
-      nn->input[0] = map->target.x * map->downscale;
-      nn->input[1] = map->target.y * map->downscale;
-      nn->input[2] = p.x * map->downscale;
-      nn->input[3] = p.y * map->downscale;
-      nn->input[4] = c.x * map->downscale;
-      nn->input[5] = c.y * map->downscale;
-      for (size_t i = 0; i < directions.size(); i++) {
-        nn->input[6 + i] = traceLine();
+      double temp[NN_MAX_NEURONS];
+      double *inputs = !inputValues ? temp : inputValues;
+
+      int k = 0;
+      inputs[k++] = p.x * map->downscale;
+      inputs[k++] = p.y * map->downscale;
+      inputs[k++] = map->target.x * map->downscale;
+      inputs[k++] = map->target.y * map->downscale;
+      inputs[k++] = traceHit();
+      for (auto d : directions) {
+        inputs[k++] = traceHit(d);
+        //inputs[k++] = traceSight(d);
       }
+      int n = int(blockers.size());
+      for (int i = 0; i < n; i++) {
+        inputs[k++] = blockers[i].x * map->downscale;
+        inputs[k++] = blockers[i].y * map->downscale;
+      }
+      inputs[k++] = c.x * map->downscale;
+      inputs[k++] = c.y * map->downscale;
+      inputs[k++] = c2.x * map->downscale;
+      inputs[k++] = c2.y * map->downscale;
+
+      return k;
     }
 
     Pixel24 color() {
       return Pixel24(255, 0, 255);
     }
 
+    Pixel24 blockerColor() {
+      return Pixel24(255, 255, 0);
+    }
+
   };
 
-  NN_neural_network_t *nn = nullptr;
-  std::vector<double> currQ;
-  std::vector<double> nextQ;
-
-  double learn = 0.07;  // neural network learning rate
+  double learn = 0.1;  // neural network learning rate
+  double lambda = 0.0003;  // l2 decay
   double gamma = 0.7;   // q learning discount factor
-  double epsilon = 0.66;  // epsilon greedy epsilon value
+  double epsilon = 0.2;  // epsilon greedy epsilon value
   double alpha = 0.3;  // Bellman learning rate
 
   Map map;
   Agent explorer;
 
+  struct RL {
+    Map &map;
+    Agent &explorer;
+    RL_agent_t ai;
+    RL(Map &map_, Agent &agent_)
+        :
+        map(map_),
+        explorer(agent_),
+        ai(nullptr) {
+    }
+    static double reward(RL_agent_state_t state) {
+      RL *rl = (RL*) (state);
+      return rl->explorer.keepMovingReward();
+    }
+    static void set(RL_agent_state_t state, double *inputValues) {
+      RL *rl = (RL*) (state);
+      rl->explorer.nnSetup(inputValues);
+
+    }
+
+    static void act(RL_agent_state_t state, int action) {
+      RL *rl = (RL*) (state);
+      rl->explorer.actionTaken = action;
+      if (!rl->explorer.traceHit())
+        rl->explorer.step();
+    }
+  };
+  RL *rl = nullptr;
   void init() {
 
-    map.init("map.bmp");
-
+    map.init("map1.bmp");
     explorer.init(map);
 
     NN_info_t info;
-    info.hidden_layers_size = 2;
-
     info.activation = NN_relu;
-    info.input_size = 2 + 2 + 2 + directions.size();  //target, position, ewma + traces
-    info.output_size = directions.size();  //Q calues
+    info.learning_rate = learn;
+    info.l2_decay = lambda;
+    info.hidden_layers_size = 2;
+    info.neurons_per[0] = 90;
+    info.neurons_per[1] = 90;
+    info.input_size = explorer.nnSetup(nullptr);
+    info.output_size = directions.size();
+    printf("%s:input size: %d\n", __FUNCTION__, info.input_size);
+    printf("%s:output size: %d\n", __FUNCTION__, info.output_size);
 
-    nn = new NN_neural_network_t;
-    for (int i = 0; i < info.hidden_layers_size; i++)
-      info.neurons_per[i] = 10;
-    NN_init_neural_network(nn, &info);  // 1 hidden layer with 4 neurons
-
-    explorer.nnSetup(nn);
-
-    currQ = std::vector<double>(directions.size());
-    nextQ = std::vector<double>(directions.size());
-  }
-
-  int eGreedy() {
-    int qSize = (int) directions.size();
-
-    if (NN_random(1.0, 0.0) <= epsilon)
-      // Exploration: select a random action
-      return rand() % qSize;
-
-    // Exploitation: select the action with the highest Q-value
-    int best = 0;
-    double qMax = currQ[0];
-    for (int i = 1; i < qSize; i++) {
-      float q = currQ[i];
-      if (q > qMax) {
-        qMax = q;
-        best = i;
-      }
-    }
-    return best;
+    rl = new RL(map, explorer);
+    rl->ai = RL_init(RL_sarsa, alpha, epsilon, gamma, &info, RL::set,
+                     RL::reward, RL::act, rl);
   }
 
   void explore() {
-    int qSize = (int) directions.size();  // same nn output/target size, currQ size && nextQ size;
-
-    auto set_q = [&](std::vector<double> &q) {
-      for (int i = 0; i < qSize; i++)
-        q[i] = nn->output_layer.neurons[i].value;
-    };
-
-    auto max_q = [&](std::vector<double> &q) {
-      double max = q[0];
-      for (int i = 0; i < qSize; i++)
-        if (q[i] > max)
-          max = q[i];
-      return max;
-    };
-
-    explorer.nnSetup(nn);
-    NN_forward_propagate(nn);
-    set_q(currQ);
-
-    explorer.action = eGreedy();
-    if (!explorer.traceHit())
-      explorer.step();
-
-    explorer.nnSetup(nn);
-    NN_forward_propagate(nn);
-    set_q(nextQ);
-
-    double actionTarget = explorer.reward() + gamma * max_q(nextQ);
-    for (int i = 0; i < qSize; i++)
-      nn->target[i] =
-          i == explorer.action ?
-              currQ[i] + alpha * (actionTarget - currQ[i]) : currQ[i];
-    NN_backward_propagate(nn, learn);
-
+    RL_step(rl->ai);
+    if(rl->explorer.steps > 400)
+      rl->explorer.reset();
   }
 
   ~Game() {
-    delete nn;
+    RL_export_neural_network(rl->ai, "nn.txt");
+    RL_term(&rl->ai);
+    delete rl;
   }
 
 };
