@@ -139,9 +139,10 @@ void RL_step(RL_agent_t agent) {
         * (target - ctx->qs[CURR_QS][ctx->action.taken]);
   }
   if (RL_qlearn == ctx->type) {
-    target = reward + ctx->gamma * q_max(ctx, NEXT_QS);  //Q-Learning
-    nn->target[last_action.taken] += ctx->alpha
-        * (target - ctx->qs[CURR_QS][last_action.taken]);
+    int best = q_max(ctx, NEXT_QS);
+    target = reward + ctx->gamma * ctx->qs[NEXT_QS][best]; // Q-Learning
+    nn->target[ctx->action.taken] += ctx->alpha
+        * (target - ctx->qs[CURR_QS][ctx->action.taken]);
 
   }
   NN_backward_propagate(nn);
