@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>
 #include <stdint.h>
 
 #include "mtwister.h"
-
 #include "neural.h"
 
 #define CLAMP( v, l, h ){ v = v < (l) ? (l) : v > (h) ? (h) : v; }
@@ -24,7 +22,7 @@ void NN_seed_random(unsigned long seed) {
 
 double NN_random(double scale, double offset) {
   if (!mt_inited) {
-    mt_rand = seedRand(time(0));
+    mt_rand = seedRand(123);
     mt_inited = 1;
   }
   return genRand(&mt_rand) * scale + offset;
@@ -279,6 +277,12 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
 void NN_train_neural_network(NN_neural_network_t *nn) {
   NN_forward_propagate(nn);
   NN_backward_propagate(nn);
+  double mse = 0.0f;
+  for (int j = 0; j < nn->output_size; j++) {
+    double delta = nn->prediction[j] - nn->target[j];
+    mse += delta * delta;
+  }
+  return mse / (double)nn->output_size;
 }
 
 void NN_export_neural_network(NN_neural_network_t *nn, const char *filename) {
