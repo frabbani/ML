@@ -190,11 +190,11 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
   double lambda = nn->info.l2_decay;
 
   int output_size = nn->info.output_size;
-  // calculate output layer errors and gradients
+// calculate output layer errors and gradients
   NN_neural_layer_t *output_layer = &nn->output_layer;
   NN_neuron_t *output_neurons = output_layer->neurons;
 
-  // ew, stack memory!
+// ew, stack memory!
   double errors[NN_MAX_HIDDEN_LAYERS + 1][NN_MAX_NEURONS];
 
   double *output_error = errors[nn->info.hidden_layers_size];
@@ -207,13 +207,13 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
    }
    */
 
-  // compute output layer error
+// compute output layer error
   for (int i = 0; i < output_size; i++) {
     double output = output_neurons[i].value;
     output_error[i] = (output - nn->target[i]);
   }
 
-  // update output layer weights and biases
+// update output layer weights and biases
   NN_neural_layer_t *last_hidden_layer = output_layer->feed;
   NN_neuron_t *last_hidden_neurons = last_hidden_layer->neurons;
   for (int i = 0; i < output_size; i++) {
@@ -274,7 +274,7 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
 
 }
 
-void NN_train_neural_network(NN_neural_network_t *nn) {
+double NN_train_neural_network(NN_neural_network_t *nn) {
   NN_forward_propagate(nn);
   NN_backward_propagate(nn);
   double mse = 0.0f;
@@ -282,7 +282,7 @@ void NN_train_neural_network(NN_neural_network_t *nn) {
     double delta = nn->prediction[j] - nn->target[j];
     mse += delta * delta;
   }
-  return mse / (double)nn->output_size;
+  return mse / (double) nn->output_size;
 }
 
 void NN_export_neural_network(NN_neural_network_t *nn, const char *filename) {
@@ -397,6 +397,130 @@ void NN_import_neural_network(NN_neural_network_t **nn, const char *filename) {
   }
 
   fclose(fp);
+}
+
+static void init_recurrent_neuron(RNN_neuron_t *neuron, int n, int d) {
+  neuron->bias = 0.0;
+  for (int i = 0; i < n; i++)
+    neuron->weights[i] = NN_random(2.0, -1.0);
+  for (int i = 0; i < d; i++)
+    neuron->recurrent_weights[i] = NN_random(2.0, -1.0);
+}
+
+static void init_recurrent_neural_first_hidden_layer(RNN_neural_layer_t *layer,
+                                                     int size, int input_size,
+                                                     const double *input) {
+  layer->type = NN_first;
+  layer->size = size;
+  CLAMP(layer->size, 1, NN_MAX_NEURONS);
+  layer->input = input;
+  for (int i = 0; i < layer->size; i++)
+    init_recurrent_neuron(&layer->neurons[i], input_size, layer->size);
+}
+
+static void init_recurrent_neural_hidden_layer(
+    RNN_neural_layer_t *layer, RNN_neural_layer_t *previous_layer, int size) {
+  layer->type = NN_hidden;
+  layer->size = size;
+  CLAMP(layer->size, 1, NN_MAX_NEURONS);
+  layer->feed = previous_layer;
+  for (int i = 0; i < layer->size; i++)
+    init_recurrent_neuron(&layer->neurons[i], layer->feed->size, layer->size);
+}
+
+static void init_recurrent_neural_output_layer(
+    NN_neural_layer_t *layer, RNN_neural_layer_t *previous_layer, int size) {
+  layer->type = NN_output;
+  layer->size = size;
+  CLAMP(layer->size, 1, NN_MAX_NEURONS);
+  layer->recurrent_feed = previous_layer;
+  for (int i = 0; i < layer->size; i++)
+    init_neuron(&layer->neurons[i], layer->recurrent_feed->size);
+}
+
+static void recurrent_neural_layer_propagate_hidden(RNN_neural_layer_t *layer,
+                                                    int input_size, int t,
+                                                    int depth) {
+  int t_previous = (t - 1 + depth) % depth;
+  for (int i = 0; i < layer->size; i++) {
+    RNN_neuron_t *neuron = &layer->neurons[i];
+    double sum = neuron->bias;
+
+    // input sum
+    if (layer->type == NN_first) {
+      for (int j = 0; j < input_size; j++)
+        sum += neuron->weights[j] * layer->input[j];
+    } else {
+      for (int j = 0; j < layer->feed->size; j++)
+        sum += neuron->weights[j] * layer->feed->neurons[j].history[t];
+    }
+
+    // recurrent sum
+    for (int j = 0; j < layer->size; j++)
+      sum += neuron->recurrent_weights[j]
+          * layer->neurons[j].history[t_previous];
+
+    neuron->history[t] = tanh_act(sum);
+  }
+}
+
+static void recurrent_neural_layer_propagate_output(NN_neural_layer_t *layer,
+                                                    int t) {
+  if (layer->type != NN_output)
+    return;
+
+  for (int i = 0; i < layer->size; i++) {
+    NN_neuron_t *neuron = &layer->neurons[i];
+    double sum = neuron->bias;
+    for (int j = 0; j < layer->feed->size; j++)
+      sum += neuron->weights[j] * layer->recurrent_feed->neurons[j].history[t];
+
+    neuron->value = sigmoid_act(sum);
+  }
+}
+
+void RNN_init_neural_network(RNN_neural_network_t *rnn,
+                             const RNN_info_t *params) {
+  rnn->info.hidden_layers_size = params->hidden_layers_size;
+  CLAMP(rnn->info.hidden_layers_size, 1, NN_MAX_HIDDEN_LAYERS);
+  rnn->info.input_size = params->input_size;
+  CLAMP(rnn->info.input_size, 1, NN_MAX_NEURONS);
+  rnn->info.output_size = params->output_size;
+  CLAMP(rnn->info.output_size, 1, NN_MAX_NEURONS);
+  for (int i = 0; i < rnn->info.hidden_layers_size; i++) {
+    rnn->info.neurons_per[i] = params->neurons_per[i];
+    CLAMP(rnn->info.neurons_per[i], 1, NN_MAX_NEURONS);
+  }
+  rnn->info.learning_rate = fabs(params->learning_rate);
+  rnn->info.l2_decay = fabs(params->l2_decay);
+  rnn->info.bptt_depth = params->bptt_depth;
+  CLAMP(rnn->info.bptt_depth, 1, RNN_MAX_DEPTH);
+
+  init_recurrent_neural_first_hidden_layer(&rnn->hidden_layers[0],
+                                           rnn->info.neurons_per[0],
+                                           rnn->info.input_size, rnn->input);
+  int nls = rnn->info.hidden_layers_size;
+  for (int i = 1; i < nls; i++) {
+    init_recurrent_neural_hidden_layer(&rnn->hidden_layers[i],
+                                       &rnn->hidden_layers[i - 1],
+                                       rnn->info.neurons_per[i]);
+  }
+  init_recurrent_neural_output_layer(&rnn->output_layer,
+                                     &rnn->hidden_layers[nls - 1],
+                                     rnn->info.output_size);
+}
+
+void RNN_forward_propagate(RNN_neural_network_t *rnn) {
+  rnn->t = (rnn->t + 1) % rnn->info.bptt_depth;
+  for (int i = 0; i < rnn->info.hidden_layers_size; i++) {
+    recurrent_neural_layer_propagate_hidden(&rnn->hidden_layers[i],
+                                            rnn->info.input_size, rnn->t,
+                                            rnn->info.bptt_depth);
+  }
+
+  recurrent_neural_layer_propagate_output(&rnn->output_layer, rnn->t);
+  for (int i = 0; i < rnn->info.output_size; i++)
+    rnn->prediction[i] = rnn->output_layer.neurons[i].value;
 }
 
 #pragma GCC diagnostic pop

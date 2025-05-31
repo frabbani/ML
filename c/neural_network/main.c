@@ -9,6 +9,7 @@
 
 #define EPOCHS  750000
 #define LEARNING_RATE 0.03
+#define L2_LAMBDA 0.0001
 
 
 void print_neural_layer(const NN_neural_layer_t *layer, int input_size) {
@@ -42,7 +43,7 @@ void print_neural_network(NN_neural_network_t *nn) {
 }
 
 double func(double x) {
-  return  0.5 * x - 0.2;
+  return  0.5 * x * x - 0.2;
 }
 
 int main() {
@@ -52,7 +53,9 @@ int main() {
   NN_neural_network_t *nn = malloc( sizeof(NN_neural_network_t));
 
   NN_info_t info;
-  info.activation = NN_sigmoid;
+  info.learning_rate = LEARNING_RATE;
+  info.l2_decay = L2_LAMBDA;
+  info.activation = NN_relu;
   info.hidden_layers_size = 1;
   info.input_size = 1;
   info.output_size = 1;
@@ -69,7 +72,7 @@ int main() {
   for (int k = 0; k < EPOCHS; k++) {
     nn->input[0] = NN_random( 2.0, -1.0 );
     nn->target[0] = func(nn->input[0]);
-    NN_train_neural_network(nn, LEARNING_RATE);
+    NN_train_neural_network(nn);
   }
 
   printf("******************\n");
