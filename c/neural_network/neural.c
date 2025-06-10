@@ -219,7 +219,7 @@ void NN_backward_propagate(NN_neural_network_t *nn) {
       for (int j = 0; j < next_layer->size; j++)
         sum += next_neurons[j].delta * next_neurons[j].weights[i];
       curr_neurons[i].delta = sum
-          * act_deriv(curr_neurons[i].value_pre, nn->info.activation);
+          * act_deriv(curr_neurons[i].value, nn->info.activation);
     }
     next_layer = curr_layer;
   }
