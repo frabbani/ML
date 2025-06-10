@@ -13,6 +13,8 @@ typedef struct {
   double weights[NN_MAX_NEURONS];
   double bias;
   double value;
+  double value_pre;
+  double delta;
 } NN_neuron_t;
 
 typedef struct {
