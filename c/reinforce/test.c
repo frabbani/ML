@@ -33,11 +33,14 @@ double reward_cb(RL_agent_state_t state) {
 int main() {
   grid_agent_state_t agent_state = { .position = 0, .steps = 0 };
 
-  NN_info_t nn_info = { .activation = NN_relu, .learning_rate = 0.1, .l2_decay =
-      0.0, .input_size = 5, .output_size = 2,  // 2 actions: left (0), right (1)
-      .hidden_layers_size = 1, .neurons_per = { 8 },  // 1 hidden layer with 8 neurons
-      };
-
+  NN_info_t nn_info;
+  nn_info.activation = NN_relu;
+  nn_info.learning_rate = 0.01;
+  nn_info.l2_decay = 0.0003;
+  nn_info.input_size = 5;
+  nn_info.output_size = 2;  // left/right is 0/1
+  nn_info.hidden_layers_size = 1;
+  nn_info.neurons_per[0] = 8;
   NN_seed_random(42);  // Optional: set RNG seed for reproducibility
 
   RL_agent_t agent = RL_init(RL_qlearn,
@@ -46,19 +49,21 @@ int main() {
       0.99,            // gamma (discount factor)
       &nn_info, set_input_cb, reward_cb, act_cb, &agent_state);
 
-  for (int episode = 0; episode < 100; ++episode) {
+  for (int ep = 0; ep < 100; ep++) {
     agent_state.position = 0;
     agent_state.steps = 0;
-    for (int t = 0; t < 20; ++t) {
+    for (int i = 0; i < 20; i++) {
       RL_step(agent);
       if (agent_state.position == 4)
         break;
     }
-    printf("Episode %3d: reached %d in %2d steps? %s\n", episode,
+
+    printf("Episode %3d: reached %d in %2d steps? %s\n", ep,
            agent_state.position, agent_state.steps,
            (agent_state.position == 4) ? "yes!" : "no");
   }
 
+  RL_export_neural_network(agent, "nn.txt");
   RL_term(&agent);
   return 0;
 }
