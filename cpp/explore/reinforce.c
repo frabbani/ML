@@ -41,11 +41,8 @@ typedef struct RL_ctx_s {
 #define CURR_QS  0
 #define NEXT_QS  1
 
-RL_agent_t RL_init(RL_type_t type, double alpha, double epsilon, double gamma,
-                   const NN_info_t *nn_info, RL_set_input_cb set,
-                   RL_reward_cb reward, RL_act_cb act, void *agent_info) {
+RL_agent_t RL_init(RL_type_t type, double alpha, double epsilon, double gamma, const NN_info_t *nn_info, RL_set_input_cb set, RL_reward_cb reward, RL_act_cb act, void *agent_info) {
   RL_ctx_t *ctx = malloc(sizeof(RL_ctx_t));
-
   ctx->nn = malloc(sizeof(NN_neural_network_t));
   NN_info_t info;
   memcpy(&info, nn_info, sizeof(NN_info_t));
@@ -100,57 +97,49 @@ static RL_action_t e_greedy(RL_ctx_t *ctx) {
 
 }
 
+static void update_qvalues(RL_ctx_t *ctx, int which) {
+  // which = which == NEXT_QS ? NEXT_QS : CURR_QS;
+  ctx->nn->input[0] = (double) ctx->action.exploratory;
+  ctx->nn->input[1] = (double) ctx->action.taken;
+  ctx->set(ctx->agent, &ctx->nn->input[2]);
+  NN_forward_propagate(ctx->nn);
+  for (int i = 0; i < ctx->qcount; i++)
+    ctx->qs[which][i] = ctx->nn->output_layer.neurons[i].value;
+}
+
 void RL_step(RL_agent_t agent) {
   RL_ctx_t *ctx = agent;
-  NN_neural_network_t *nn = ctx->nn;
   if (!ctx->inited)
     return;
 
-  ctx->nn->input[0] = (double) ctx->action.exploratory;
-  ctx->nn->input[1] = (double) ctx->action.taken;
-  ctx->set(ctx->agent, &nn->input[2]);
+  update_qvalues(ctx, CURR_QS);
 
-  NN_forward_propagate(nn);
-  for (int i = 0; i < ctx->qcount; i++) {
-    ctx->qs[CURR_QS][i] = nn->output_layer.neurons[i].value;
-  }
-  RL_action_t last_action = ctx->action;
+  // RL_action_t last_action = ctx->action;
   ctx->action = e_greedy(ctx);
-
   ctx->act(ctx->agent, ctx->action.taken);
   double reward = ctx->reward(ctx->agent);
 
-  nn->input[0] = (double) ctx->action.exploratory;
-  nn->input[1] = (double) ctx->action.taken;
-  ctx->set(ctx->agent, &nn->input[2]);
-
-  NN_forward_propagate(nn);
-  for (int i = 0; i < ctx->qcount; i++) {
-    ctx->qs[NEXT_QS][i] = nn->output_layer.neurons[i].value;
-  }
+  update_qvalues(ctx, NEXT_QS);
 
   double target = 0.0;
-  for (int i = 0; i < ctx->qcount; i++)
-    nn->target[i] = ctx->qs[CURR_QS][i];
-
-  if (RL_sarsa == ctx->type) {
-    target = reward + ctx->gamma * ctx->qs[NEXT_QS][ctx->action.taken];  // SARSA
-    nn->target[ctx->action.taken] += ctx->alpha
-        * (target - ctx->qs[CURR_QS][ctx->action.taken]);
-  }
+  if (RL_sarsa == ctx->type)
+    target = reward + ctx->gamma * ctx->qs[NEXT_QS][ctx->action.taken];
   if (RL_qlearn == ctx->type) {
-    target = reward + ctx->gamma * q_max(ctx, NEXT_QS);  //Q-Learning
-    nn->target[last_action.taken] += ctx->alpha
-        * (target - ctx->qs[CURR_QS][last_action.taken]);
-
+    int best = q_max(ctx, NEXT_QS);
+    target = reward + ctx->gamma * ctx->qs[NEXT_QS][best];
   }
-  NN_backward_propagate(nn);
+
+  for (int i = 0; i < ctx->qcount; i++)
+    ctx->nn->target[i] = ctx->qs[CURR_QS][i];
+  ctx->nn->target[ctx->action.taken] += ctx->alpha * (target - ctx->qs[CURR_QS][ctx->action.taken]);
+  NN_backward_propagate(ctx->nn);
 }
 
 void RL_term(RL_agent_t *agent_ptr) {
   RL_ctx_t *ctx = *agent_ptr;
-  if (ctx->nn)
+  if (ctx->nn) {
     free(ctx->nn);
+  }
 
   if (ctx->qs[0])
     free(ctx->qs[0]);

@@ -40,14 +40,8 @@ void step() {
     g.map.clearVisited();
   }
 
-  if (sdl.mouseKeyPress(0)) {
-    printf("%d, %d\n", sdl.mouseX, sdl.mouseY);
-    g.explorer.addBlocker(Vector2(double(sdl.mouseX), double(sdl.mouseY)));
-  }
-
   if (sdl.mouseKeyDown(2)) {
     printf("%d, %d\n", sdl.mouseX, sdl.mouseY);
-    //g.explorer.pull = Vector2(double(sdl.mouseX), double(sdl.mouseY));
     g.explorer.reset(Vector2(double(sdl.mouseX), double(sdl.mouseY)));
     g.map.clearVisited();
   } else
@@ -73,13 +67,7 @@ void draw() {
       }
   };
 
-  for (auto b : g.explorer.blockers)
-    draw_faded_box(b, 3, g.explorer.blockerColor(), 0.5);
-
   draw_faded_box(g.explorer.p, 4, g.explorer.color(), 1.0);
-  draw_faded_box(g.explorer.c, 3, g.explorer.color(), 0.6);
-  draw_faded_box(g.explorer.c2, 3, g.explorer.color(), 0.3);
-
 //  for (auto d : directions) {
 //    Vector2 p = g.explorer.p;
 //    Vector2 p2 = g.explorer.p + d * g.map.radius();

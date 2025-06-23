@@ -7,17 +7,19 @@ extern "C" {
 #define NN_MAX_NEURONS 128
 #define NN_MAX_HIDDEN_LAYERS  8
 
-typedef struct {
-  double weights[NN_MAX_NEURONS];
-  double bias;
-  double value;
-} NN_neuron_t;
-
 typedef enum {
   NN_first,
   NN_hidden,
   NN_output
 } NN_layer_type_t;
+
+typedef struct {
+  double weights[NN_MAX_NEURONS];
+  double bias;
+  double value;
+  double value_pre;
+  double delta;
+} NN_neuron_t;
 
 typedef struct NN_neural_layer_s {
   int size;
@@ -65,7 +67,7 @@ void NN_export_neural_network(NN_neural_network_t *nn, const char *filename);
 void NN_import_neural_network(NN_neural_network_t **nn, const char *filename);
 void NN_forward_propagate(NN_neural_network_t *nn);
 void NN_backward_propagate(NN_neural_network_t *nn);
-void NN_train_neural_network(NN_neural_network_t *nn);
+double NN_train_neural_network(NN_neural_network_t *nn);
 
 #ifdef __cplusplus
 }
