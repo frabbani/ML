@@ -16,6 +16,7 @@ typedef enum {
 typedef struct {
   RNN_mode_t mode;
   double learning_rate;
+  double beta;
   int input_size;
   int output_size;
   int hidden_layers_size;
@@ -27,6 +28,12 @@ typedef struct {
   double weights[NN_MAX_NEURONS];
   double recurrent_weights[NN_MAX_NEURONS];
   double bias;
+  struct{
+    double weights[NN_MAX_NEURONS];
+    double recurrent_weights[NN_MAX_NEURONS];
+    double bias;
+  }moment;
+
   double history[RNN_MAX_DEPTH];
   double delta[RNN_MAX_DEPTH];
 } RNN_neuron_t;
@@ -53,6 +60,7 @@ typedef struct {
   RNN_sequence_t target;
   double prediction[NN_MAX_NEURONS];  //latest predictino
   int t;
+  double beta_decay;
 } RNN_neural_network_t;
 
 typedef struct {

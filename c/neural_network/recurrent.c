@@ -42,6 +42,12 @@ double hidden_deriv(double x) {
   //return leaky_relu_deriv(x, 0.1);
 }
 
+void apply_momentum(double *value, double *moment, double beta, double learning_rate, double grad, double beta_correction_inv) {
+  *moment = beta * (*moment) + (1.0 - beta) * grad;
+  double m0 = *moment * beta_correction_inv;
+  *value -= learning_rate * m0;
+}
+
 static void init_recurrent_neuron(RNN_neuron_t *neuron, int m, int n, int d) {
   neuron->bias = 0.0;
 
@@ -134,6 +140,8 @@ void RNN_init_neural_network(RNN_neural_network_t *rnn, const RNN_info_t *params
   rnn->info.learning_rate = fabs(params->learning_rate);
   rnn->info.bptt_depth = params->bptt_depth;
   CLAMP(rnn->info.bptt_depth, 1, RNN_MAX_DEPTH-1);  //allow for oldest - 1
+  rnn->info.beta = params->beta;
+  CLAMP(rnn->info.beta, 0.0, 0.99);
 
   for (int i = 0; i < rnn->info.bptt_depth; i++) {
     for (int j = 0; j < rnn->info.input_size; j++)
@@ -148,6 +156,7 @@ void RNN_init_neural_network(RNN_neural_network_t *rnn, const RNN_info_t *params
     init_recurrent_neural_hidden_layer(&rnn->hidden_layers[i], &rnn->hidden_layers[i - 1], rnn->info.neurons_per[i], rnn->info.bptt_depth);
   init_recurrent_neural_output_layer(&rnn->output_layer, &rnn->hidden_layers[nls - 1], rnn->info.output_size, rnn->info.bptt_depth);
   rnn->t = 0;
+  rnn->beta_decay = rnn->info.beta;
 }
 
 double RNN_forward_propagate(RNN_neural_network_t *rnn, const double *input, const double *target) {
@@ -174,15 +183,15 @@ double RNN_forward_propagate(RNN_neural_network_t *rnn, const double *input, con
   return mse / (double) rnn->info.output_size;
 }
 
-
 void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
   double learning_rate = rnn->info.learning_rate / (double) rnn->info.bptt_depth;
+  double beta = rnn->info.beta;
   int depth = rnn->info.bptt_depth;
   int output_size = rnn->info.output_size;
   RNN_neural_layer_t *output_layer = &rnn->output_layer;
   RNN_neuron_t *output_neurons = output_layer->neurons;
 
-  if(metrics){
+  if (metrics) {
     metrics->grad_count = metrics->recur_grad_count = metrics->delta_count = 0;
     metrics->grad_min = metrics->recur_grad_min = metrics->delta_min = +INFINITY;
     metrics->grad_max = metrics->recur_grad_max = metrics->delta_max = -INFINITY;
@@ -194,7 +203,7 @@ void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
     for (int i = 0; i < output_size; i++) {
       double output = output_neurons[i].history[when];
       output_neurons[i].delta[when] = (output - rnn->target.values[when][i]) * output_deriv(output);
-      if(metrics){
+      if (metrics) {
         metrics->delta_count++;
         metrics->delta_min = MIN(output_neurons->delta[when], metrics->delta_min);
         metrics->delta_max = MAX(output_neurons->delta[when], metrics->delta_max);
@@ -221,7 +230,7 @@ void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
         for (int j = 0; j < next_layer->size; j++)
           sum += next_layer->neurons[j].delta[now] * next_layer->neurons[j].weights[i];
         neuron->delta[now] = sum * hidden_deriv(neuron->history[now]);
-        if(metrics){
+        if (metrics) {
           metrics->delta_count++;
           metrics->delta_min = MIN(neuron->delta[now], metrics->delta_min);
           metrics->delta_max = MAX(neuron->delta[now], metrics->delta_max);
@@ -231,6 +240,9 @@ void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
     }
   }
 
+  rnn->beta_decay *= rnn->info.beta;
+  double beta_correction_inv = 1.0 / fmax(1e-8, 1.0 - rnn->beta_decay);
+
   for (int d = 0; d < depth; d++) {
     int now = (rnn->t - d + RNN_MAX_DEPTH) % RNN_MAX_DEPTH;
     int then = (rnn->t - d - 1 + RNN_MAX_DEPTH) % RNN_MAX_DEPTH;
@@ -238,17 +250,21 @@ void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
     for (int i = 0; i < output_layer->size; i++) {
       RNN_neuron_t *neuron = &output_layer->neurons[i];
       double delta = neuron->delta[now];
-      neuron->bias -= learning_rate * delta;
+      //neuron->bias -= learning_rate * delta;
+      apply_momentum(&neuron->bias, &neuron->moment.bias, beta, learning_rate, delta, beta_correction_inv);
+
       for (int j = 0; j < output_layer->feed->size; j++) {
         double grad = delta * output_layer->feed->neurons[j].history[now];
-        if(metrics){
+        if (metrics) {
           metrics->grad_count++;
           metrics->grad_min = MIN(grad, metrics->grad_min);
           metrics->grad_max = MAX(grad, metrics->grad_max);
           metrics->grad_mean += grad;
         }
-        neuron->weights[j] -= learning_rate * grad;
+        //neuron->weights[j] -= learning_rate * grad;
+        apply_momentum(&neuron->weights[j], &neuron->moment.weights[j], beta, learning_rate, grad, beta_correction_inv);
       }
+      //output layer is feed-forward only so zero recurrent weights
       for (int j = 0; j < output_layer->size; j++)
         neuron->recurrent_weights[j] = 0.0;
     }
@@ -259,55 +275,61 @@ void RNN_backward_propagate(RNN_neural_network_t *rnn, RNN_metrics_t *metrics) {
       for (int i = 0; i < layer->size; i++) {
         RNN_neuron_t *neuron = &layer->neurons[i];
         double delta = neuron->delta[now];
-        neuron->bias -= learning_rate * delta;
+        //neuron->bias -= learning_rate * delta;
+        apply_momentum(&neuron->bias, &neuron->moment.bias, beta, learning_rate, delta, beta_correction_inv);
 
         for (int j = 0; j < layer->size; j++) {
           double grad = delta * layer->neurons[j].history[then];
-          if(metrics){
+          if (metrics) {
             metrics->recur_grad_count++;
             metrics->recur_grad_min = MIN(grad, metrics->recur_grad_min);
             metrics->recur_grad_max = MAX(grad, metrics->recur_grad_max);
             metrics->recur_grad_mean += grad;
           }
-          neuron->recurrent_weights[j] -= learning_rate * grad;
+          //neuron->recurrent_weights[j] -= learning_rate * grad;
+          apply_momentum(&neuron->recurrent_weights[j], &neuron->moment.recurrent_weights[j], beta, learning_rate, grad, beta_correction_inv);
         }
 
         if (layer->type == NN_first) {
           double *input = rnn->input.values[now];
           for (int j = 0; j < rnn->info.input_size; j++) {
             double grad = delta * input[j];
-            if(metrics){
+            if (metrics) {
               metrics->grad_count++;
               metrics->grad_min = MIN(grad, metrics->grad_min);
               metrics->grad_max = MAX(grad, metrics->grad_max);
               metrics->grad_mean += grad;
             }
-            neuron->weights[j] -= learning_rate * grad;
+            //neuron->weights[j] -= learning_rate * grad;
+            apply_momentum(&neuron->weights[j], &neuron->moment.weights[j], beta, learning_rate, grad, beta_correction_inv);
+
           }
 
         } else {
           RNN_neural_layer_t *prev_layer = layer->feed;
           for (int j = 0; j < prev_layer->size; j++) {
             double grad = delta * prev_layer->neurons[j].history[now];
-            if(metrics){
+            if (metrics) {
               metrics->grad_count++;
               metrics->grad_min = MIN(grad, metrics->grad_min);
               metrics->grad_max = MAX(grad, metrics->grad_max);
               metrics->grad_mean += grad;
             }
-            neuron->weights[j] -= learning_rate * grad;
+            //neuron->weights[j] -= learning_rate * grad;
+            apply_momentum(&neuron->weights[j], &neuron->moment.weights[j], beta, learning_rate, grad, beta_correction_inv);
           }
         }
       }
     }
   }
-  if(metrics){
-    if(metrics->grad_count)
-      metrics->grad_mean /= (double)metrics->grad_count;
-    if(metrics->recur_grad_count)
-      metrics->recur_grad_mean /= (double)metrics->recur_grad_count;
-    if(metrics->delta_count)
-      metrics->delta_mean /= (double)metrics->delta_count;
+
+  if (metrics) {
+    if (metrics->grad_count)
+      metrics->grad_mean /= (double) metrics->grad_count;
+    if (metrics->recur_grad_count)
+      metrics->recur_grad_mean /= (double) metrics->recur_grad_count;
+    if (metrics->delta_count)
+      metrics->delta_mean /= (double) metrics->delta_count;
   }
 }
 
@@ -325,7 +347,6 @@ double RNN_train_neural_network(RNN_neural_network_t *rnn, const double *input, 
   }
 
   return mse / (double) rnn->info.output_size;
-
 
 }
 

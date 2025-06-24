@@ -66,7 +66,7 @@ void testRNN(void) {
 #define N       1000
 #define LENGTH  (DEPTH * 5)
 #undef EPOCHS
-#define EPOCHS  250
+#define EPOCHS  50
 
   NN_seed_random(42);
 
@@ -74,9 +74,10 @@ void testRNN(void) {
   info.input_size = 1;
   info.output_size = 1;
   info.hidden_layers_size = 1;
-  info.neurons_per[0] = 8;
+  info.neurons_per[0] = 20;
   info.bptt_depth = DEPTH;
-  info.learning_rate = 0.003;
+  info.learning_rate = 0.001;
+  info.beta = 0.9;
 
   RNN_neural_network_t *rnn = malloc(sizeof *rnn);
   RNN_init_neural_network(rnn, &info);
@@ -109,7 +110,8 @@ void testRNN(void) {
     if (t < DEPTH)
       continue;
     double pred = rnn->prediction[0];
-    printf("[%2d]  targ: %+.4f | pred: %+.4f\n", t, targ, pred);
+    double e = fabs(pred - targ) / (fabs(pred) + fabs(targ) + 1e-8);
+    printf("[%-2d]  targ: %+.4f | pred: %+.4f (error: ~%.1f%%)\n", t, targ, pred, e * 100.0);
   }
 }
 
